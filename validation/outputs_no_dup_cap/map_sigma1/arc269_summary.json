@@ -1,0 +1,28 @@
+{
+  "label": "arc269",
+  "F": 90243,
+  "N": 537,
+  "leaves": 269,
+  "min_copies": 1,
+  "prior": {
+    "sigma": 1.0,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -1117479.897323908,
+    "L0": 0.5901145282576303,
+    "F": 90243,
+    "min_copies": 1,
+    "root_copies_obs": 5905.830971388909,
+    "root_copies_corr": 5905.830971388909,
+    "root_families_obs": 3108.168507867121,
+    "root_families_corr": 3108.168507867121,
+    "copies_per_family": 1.9000999966509513
+  },
+  "log_prior_at_best": -3134.6213594271876,
+  "neg_logp_at_best": 1120614.5186833353,
+  "csuros_baseline": null,
+  "source_rate_file": "validation/arc269_sota/final_rates_map_s1_sigma1_v2.npz"
+}

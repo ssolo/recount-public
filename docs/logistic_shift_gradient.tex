@@ -1,0 +1,817 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{booktabs}
+
+% -- Csurös-style notation (CM09 SI / Csurös 2021 arXiv) ------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\PROB}{\mathbb{P}}
+\newcommand{\Tree}{\mathcal{T}}
+\newcommand{\Leaves}{\mathcal{L}}
+\newcommand{\pa}{\mathrm{pa}}
+\newcommand{\ch}{\mathrm{ch}}
+\newcommand{\troot}{R}
+\newcommand{\Prof}{\boldsymbol{\xi}}
+\newcommand{\rate}{\kappa}
+\newcommand{\dup}{\lambda}
+\newcommand{\loss}{\mu}
+\newcommand{\edgelen}{t}
+\newcommand{\survp}{\tilde p}
+\newcommand{\survq}{\tilde q}
+\newcommand{\Ll}{\mathcal{L}}
+\newcommand{\Om}{\Omega}
+\DeclareMathOperator{\logit}{logit}
+\DeclareMathOperator{\Surv}{Surv}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{The $K$-category LogisticShift mixture for gain--loss--duplication evolution:\\
+       closed-form gradient via the responsibility identity}
+\author{\texttt{recount} project\\
+        \textit{notation following CM09 SI and Cs\H{u}r\"os 2021 arXiv}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{\small\textbf{Provenance and disclaimer.}
+This document was drafted by Claude (Anthropic's LLM, model
+\texttt{claude-opus-4-7[1m]}) in collaboration with the human author,
+as part of an interactive Claude Code session
+(\url{https://claude.com/claude-code}). The mathematical derivations
+follow standard arguments from EM mixture theory and Cs\H{u}r\"os'
+analytical-gradient recursions. The chain rule and softmax weight
+gradient have been finite-difference validated to $\sim 10^{-9}$
+relative error against the analytical implementation in
+\texttt{recount.logistic\_shift\_gradient.mixture\_gradient\_native}
+(see Lemma~\ref{lem:rate-level-shift} for the implementation note that
+our Python code uses an equivalent rate-level parameterisation rather
+than the survival-of-logit form). Treat as ``LLM-drafted,
+human-checked, FD-validated'' rather than peer-reviewed manuscript
+content.}}
+\end{center}
+
+\begin{abstract}
+We derive in closed form the gradient of the corrected log-likelihood
+of a $K$-category LogisticShift mixture over the
+gain--loss--duplication (GLD) birth--death process on a rooted
+phylogeny, with respect to: the per-edge base rates
+$(\rate_v,\loss_v,\dup_v,\edgelen_v)$, the per-category shifts
+$\Delta^{(k)} = (\Delta_\loss^{(k)}, \Delta_\dup^{(k)})$, and the
+softmax-parameterised mixing weights $\bm\alpha$. The mixture
+identity (Proposition~\ref{prop:resp-id})
+$\partial \log L_f / \partial \phi = \sum_k \gamma_{f,k}
+   \partial \log L_{f,k} / \partial \phi$
+with per-family responsibilities $\gamma_{f,k} = p_k L_{f,k}/L_f$
+reduces every required derivative to the per-category single-rate
+derivative already implemented in
+\texttt{recount\_gradient\_native} (CM09), together with a per-axis
+Jacobian from the shift transform. The corrected-LL extension
+(Cs26 SI Thm 5) propagates additively. The whole gradient costs
+$K$ forward gradient evaluations plus $\mathcal{O}(KF)$ for the
+responsibility-weighted aggregation. The bounded-dup
+logit reparameterisation (sub-critical Yule) applies as a
+multiplicative final-step Jacobian on the dup block only.
+\end{abstract}
+
+% =================================================================
+\section{Biological motivation: heterogeneity across families}
+\label{sec:motivation}
+% =================================================================
+
+A single-rate GLD fit assigns the same per-edge gain, loss, and
+duplication rates to every gene family.  In real biology this is a
+strong assumption: families differ enormously in their evolutionary
+dynamics. Housekeeping families (translation, DNA replication,
+central metabolism) are typically maintained at fixed copy number
+across long evolutionary spans, with very low gain and duplication
+rates. Accessory families (defence systems, secondary metabolism,
+restriction--modification) are gained, lost, and duplicated
+frequently --- sometimes orders of magnitude faster than housekeeping.
+
+\paragraph{What a rate-mixture model captures.}
+A $K$-category rate mixture allows the dataset to support multiple
+distinct rate regimes. Each family is treated as having been drawn
+from one of $K$ categories, with category-specific rate parameters,
+plus a mixing distribution over the categories. The likelihood
+becomes a weighted sum across categories, and the inference learns
+both the category-specific rates and the mixing weights from data
+alone (without prior knowledge of which family belongs to which
+class).
+
+\paragraph{The LogisticShift restriction.}
+Following Cs\H{u}r\"os' \texttt{RateVariationModel.LogisticShift}, we
+do not allow the categories to differ \emph{arbitrarily}. We tie
+them together by saying: category $k$ shifts the base survival
+parameters $(\survp_v, \survq_v)$ on every branch by a pair of
+\emph{global} (branch-independent) logit-shifts $\Delta_\loss^{(k)},
+\Delta_\dup^{(k)}$.  Equivalently (and more conveniently for
+implementation; see Lemma~\ref{lem:rate-level-shift}), category $k$
+multiplies the base rates by $e^{\Delta^{(k)}_\loss}$ and
+$e^{\Delta^{(k)}_\dup}$.  The shift is one scalar per category per
+axis (loss/length and duplication), so the model has $2(K-1)$ free
+shift parameters plus $K-1$ free mixing weights, beyond the base GLD
+rates --- adding modest dimensionality but very strong heterogeneity
+expressiveness.
+
+\paragraph{Why ``shift not multiplier''?}
+A logit-shift of survival probability has a clean interpretation:
+category $k$ either accelerates or decelerates the
+\emph{probability of an event happening on a branch}, leaving the
+branch structure (which edges connect to which) intact. The
+rate-level multiplicative shift is the natural conjugate: it scales
+the per-time rate by a category-specific factor. The two
+parameterisations agree at $K=1$ (no shift) and disagree for $K>1$
+(they correspond to different model classes); see
+\S\ref{sec:two-paramz} for the relation.
+
+\paragraph{What this document does.}
+\S\ref{sec:notation} fixes notation. \S\ref{sec:shift-model}
+introduces the mixture and the two parameterisations.
+\S\ref{sec:resp-id} proves the responsibility identity (the workhorse).
+\S\ref{sec:base-grad}--\S\ref{sec:alpha-grad} give the closed-form
+gradients with respect to base rates, shifts, and softmax mixing
+weights, in both parameterisations. \S\ref{sec:l0-grad} extends to
+the $\Om_{\min}$-corrected likelihood. \S\ref{sec:bounded-dup}
+handles the sub-critical Yule logit wrapper. \S\ref{sec:algo}
+states the algorithm and complexity. \S\ref{sec:em} connects to EM.
+\S\ref{sec:validation} documents validation.
+
+% =================================================================
+\section{Setup and notation}
+\label{sec:notation}
+% =================================================================
+
+We follow Cs\H{u}r\"os \& Mikl\'os 2009 SI (\textbf{CM09}) and Cs26
+SI.
+
+\paragraph{Tree and profiles.}
+Let $\Tree = (V, E, \troot)$ be a rooted tree with leaf set
+$\Leaves$. For internal node $v$, $\ch(v)$ are its children and
+$\pa(v)$ its parent. A gene-family profile is
+$\Prof \in \Z_{\ge 0}^\Leaves$; the data is $\{\Prof_f\}_{f=1}^F$.
+
+\paragraph{Per-edge rates.}
+On the incoming edge of each non-root node $v$:
+$\rate_v\ge0$ (gain shape), $\loss_v > 0$ (loss intensity),
+$\dup_v\ge 0$ (duplication intensity), $\edgelen_v > 0$ (edge time).
+By Cs21 convention $\loss_v \equiv 1$; we keep $\loss_v$ in the
+formulae for completeness, but it is fixed at $1$ in the fits.
+
+\paragraph{Survival parameters.}
+The CM09 SI survival map sends
+$(\loss_v, \dup_v, \edgelen_v) \mapsto (\survp_v, \survq_v)$ smoothly
+on the interior. Here $\survp_v \in (0,1]$ is the extinction
+probability of a single lineage on edge $\pa(v)\to v$
+($1-\survp_v$ being survival), and $\survq_v \in (0,1)$ is the
+Pólya per-event tail parameter for the conserved-copy decomposition
+of Cs21. The effective transferred shape is
+$\tilde\rate_v = \rate_v$ in the Pólya case
+($\dup_v > 0$) or $\rate_v(1 - e^{-\loss_v\edgelen_v})$ in the
+Poisson case ($\dup_v = 0$).
+
+\paragraph{Inside--outside and $L(0)$.}
+For a profile $\Prof$, the inside--outside recursion of CM09
+(theorems \emph{tm:lik.rec.finite}, \emph{tm:olik.rec}) yields
+per-node inside arrays $C_v(m)$ giving the likelihood of the
+subtree-profile conditioned on $m$ surviving lineages at $v$.
+The unobserved-profile mass $L(0)$ is computed by an analogous
+recursion (Cs26 SI Thm 3, Algorithm Uinner), implemented as
+\texttt{recount\_unobserved\_inside}; for $\Om_{\min}$-conditioning
+see \S\ref{sec:l0-grad}.
+
+\paragraph{Per-family likelihood and gradient.}
+For any concrete rate vector $\theta = (\rate, \loss, \dup, \edgelen)$:
+\begin{equation}
+L_f(\theta) \;:=\; \PROB[\Prof_f \mid \theta]
+\;=\; \sum_{m\ge 0}\,\PROB[\xi_\troot = m \mid \tilde\rate_\troot]
+                     \cdot C_\troot(m).
+\end{equation}
+The per-rate gradient $\partial \log L_f(\theta)/\partial\theta$ is
+given in closed form by CM09 Theorem \emph{tm:Ld} and implemented
+natively as \texttt{recount\_gradient\_native}. We denote per-family
+per-parameter returns as
+\begin{equation}
+g^{(\loss)}_{f,v}(\theta) := \frac{\partial \log L_f(\theta)}{\partial \loss_v},
+\qquad
+g^{(\dup)}_{f,v}, g^{(\rate)}_{f,v}, g^{(\edgelen)}_{f,v}
+\text{ analogously.}
+\label{eq:base-grad-kernel}
+\end{equation}
+
+% =================================================================
+\section{The LogisticShift mixture model}
+\label{sec:shift-model}
+% =================================================================
+
+\subsection{The $K$-category mixture}
+
+Each family is drawn from one of $K$ rate categories
+$k \in \{1, \dots, K\}$ with prior probability $p_k$; the
+categories differ by shifting the base rates.  The mixture
+likelihood is
+\begin{equation}
+L_f(\bm\Phi) \;=\; \sum_{k=1}^K p_k \cdot L_{f,k}(\bm\Phi),
+\qquad
+\Ll(\bm\Phi) \;=\; \sum_{f=1}^F \log L_f(\bm\Phi),
+\label{eq:mix-LL}
+\end{equation}
+where $L_{f,k}(\bm\Phi) := L_f(\theta^{(k)})$ with
+$\theta^{(k)}$ the rate vector for category $k$, derived from the
+base rates $\theta$ and the shift $\Delta^{(k)}$.
+
+\subsection{Two equivalent parameterisations of the shift}
+\label{sec:two-paramz}
+
+\paragraph{Survival-domain (Cs\H{u}r\"os' Java).}
+The reference implementation
+(\texttt{count.model.RateVariationModel.LogisticShift}) applies the
+shift to the \emph{logits of the survival parameters}:
+\begin{align}
+\logit\survp^{(k)}_v \;&=\; \logit\survp_v + \Delta_\loss^{(k)},
+\label{eq:shift-p}\\
+\logit\survq^{(k)}_v \;&=\; \logit\survq_v + \Delta_\dup^{(k)},
+\label{eq:shift-q}
+\end{align}
+with $\rate^{(k)}_v = \rate_v$, $\edgelen^{(k)}_v = \edgelen_v$
+unchanged. To go from $(\survp^{(k)}, \survq^{(k)})$ back to
+per-edge rates one inverts the survival map: this is the
+$\Surv^{-1}$ machinery in the Java reference.
+
+\paragraph{Rate-domain (our Python).}
+Our reference Python implementation
+(\texttt{recount/logistic\_shift.py:derive\_category\_rates}) applies
+the shift to the \emph{rates} directly:
+\begin{align}
+\edgelen^{(k)}_v \;&=\; \edgelen_v \cdot \exp(\Delta_\loss^{(k)}),
+\label{eq:shift-t}\\
+\dup^{(k)}_v \;&=\; \dup_v \cdot \exp(\Delta_\dup^{(k)}),
+\label{eq:shift-lam}
+\end{align}
+with $\rate^{(k)}_v = \rate_v$, $\loss^{(k)}_v = \loss_v$ unchanged.
+
+\begin{lemma}[Equivalence at $K=1$; divergence at $K>1$]
+\label{lem:rate-level-shift}
+At $K = 1$ with $\Delta_\loss^{(1)} = \Delta_\dup^{(1)} = 0$, both
+parameterisations agree exactly with the unshifted GLD: they
+describe the identity transformation.  For $K > 1$ with non-zero
+shifts, the two parameterisations describe
+\emph{numerically distinct models}, because the survival map
+$(\loss_v, \dup_v, \edgelen_v) \mapsto (\survp_v, \survq_v)$ is
+nonlinear in its arguments.
+
+The responsibility-weighted gradient identity
+(Proposition~\ref{prop:resp-id}), the softmax weight gradient
+(Theorem~\ref{thm:alpha-grad}), and the $L(0)$ correction
+(Proposition~\ref{prop:L0-grad}) are
+\emph{parameterisation-agnostic} and apply to either choice. The
+base-rate and shift Jacobians differ between the two; we give both
+forms below. Per-node numerical values from one
+implementation will not match the other except at $K=1$, but each
+implementation has an internally consistent gradient (both
+FD-validated to $\sim 10^{-9}$). Choosing between them is therefore
+a model-class choice, not a bug fix on either side.
+\end{lemma}
+
+\paragraph{Identification.}
+We fix $\Delta_\loss^{(1)} = \Delta_\dup^{(1)} = 0$, so category $1$
+has the base rates and the free shift parameters are
+$\{(\Delta_\loss^{(k)}, \Delta_\dup^{(k)}) : 2\le k\le K\}$.
+
+\subsection{Mixing weights}
+
+The mixing weights $\bm p = (p_1, \dots, p_K)$ lie on the simplex
+$\Delta_{K-1}$. We reparameterise via softmax for unconstrained
+optimisation:
+\begin{equation}
+p_k \;=\; \frac{\exp \alpha_k}{\sum_{k'=1}^K \exp\alpha_{k'}},
+\qquad
+\alpha_1 \equiv 0 \quad (\text{identifiability}).
+\label{eq:softmax}
+\end{equation}
+The free parameters of the mixture model are
+\begin{equation}
+\bm\Phi \;=\;
+\underbrace{\{(\rate_v, \loss_v, \dup_v, \edgelen_v)\}_{v\in V}}_{\text{base rates}}
+\;\cup\;
+\underbrace{\{(\Delta_\loss^{(k)}, \Delta_\dup^{(k)})\}_{k=2}^K}_{\text{shifts}}
+\;\cup\;
+\underbrace{\{\alpha_k\}_{k=2}^K}_{\text{softmax weights}}.
+\label{eq:Phi}
+\end{equation}
+
+% =================================================================
+\section{The responsibility identity}
+\label{sec:resp-id}
+% =================================================================
+
+\begin{definition}[Posterior responsibility]
+The posterior responsibility of category $k$ for family $f$ is
+\begin{equation}
+\gamma_{f,k} \;:=\; \frac{p_k L_{f,k}}{L_f}
+              \;=\;  \frac{p_k L_{f,k}}{\sum_{k'} p_{k'} L_{f,k'}}.
+\label{eq:resp}
+\end{equation}
+By construction $\gamma_{f,k} \in [0,1]$ and $\sum_k \gamma_{f,k} = 1$.
+\end{definition}
+
+\begin{proposition}[The responsibility identity]
+\label{prop:resp-id}
+For any parameter $\phi \in \bm\Phi$ on which the per-category
+likelihoods $L_{f,k}$ depend but the mixing weights $p_k$ do not,
+\begin{equation}
+\frac{\partial \log L_f}{\partial \phi}
+\;=\;
+\sum_{k=1}^K \gamma_{f,k} \cdot \frac{\partial \log L_{f,k}}{\partial \phi}.
+\label{eq:resp-id}
+\end{equation}
+\end{proposition}
+\begin{proof}
+From $L_f = \sum_k p_k L_{f,k}$,
+\begin{equation*}
+\frac{\partial \log L_f}{\partial \phi}
+\;=\;
+\frac{1}{L_f}\frac{\partial L_f}{\partial \phi}
+\;=\;
+\frac{1}{L_f}\sum_k p_k \frac{\partial L_{f,k}}{\partial\phi}
+\;=\;
+\sum_k \underbrace{\tfrac{p_k L_{f,k}}{L_f}}_{\gamma_{f,k}}
+       \cdot \frac{\partial \log L_{f,k}}{\partial \phi}.
+\quad\square
+\end{equation*}
+\end{proof}
+
+\begin{corollary}\label{cor:resp-LL}
+For the total log-likelihood,
+$\partial\Ll/\partial\phi = \sum_f\sum_k \gamma_{f,k}\partial \log L_{f,k}/\partial\phi$.
+\end{corollary}
+
+Proposition~\ref{prop:resp-id} is the workhorse: every per-category
+single-rate derivative we can compute reduces, by linearity, to a
+weighted sum involving the existing kernels.
+
+% =================================================================
+\section{Gradient with respect to base rates}
+\label{sec:base-grad}
+% =================================================================
+
+Fix a base parameter $\phi \in \{\rate_v, \loss_v, \dup_v, \edgelen_v\}$.
+By Corollary~\ref{cor:resp-LL} we have
+$\partial\Ll/\partial\phi = \sum_{f,k}\gamma_{f,k}\partial\log L_{f,k}/\partial\phi$.
+The remaining piece is the chain rule from $\phi$ to the
+category-$k$ rates.
+
+\subsection{Base-rate Jacobian (rate-domain, our Python)}
+
+\begin{proposition}[Base-rate Jacobian, rate-domain]
+\label{prop:base-jac-rate}
+Under the rate-domain parameterisation
+\eqref{eq:shift-t}--\eqref{eq:shift-lam},
+\begin{align}
+\frac{\partial \edgelen^{(k)}_v}{\partial \edgelen_v} \;&=\; \exp(\Delta_\loss^{(k)}),
+&
+\frac{\partial \dup^{(k)}_v}{\partial \dup_v} \;&=\; \exp(\Delta_\dup^{(k)}),
+\nonumber\\
+\frac{\partial \rate^{(k)}_v}{\partial \rate_v} \;&=\; 1,
+&
+\frac{\partial \loss^{(k)}_v}{\partial \loss_v} \;&=\; 1.
+\label{eq:rate-jac}
+\end{align}
+\end{proposition}
+
+\subsection{Base-rate Jacobian (survival-domain, Csurös' Java)}
+
+\begin{proposition}[Base-rate Jacobian, survival-domain]
+\label{prop:base-jac-surv}
+Under the survival-domain parameterisation
+\eqref{eq:shift-p}--\eqref{eq:shift-q},
+\begin{align}
+\frac{\partial \survp^{(k)}_v}{\partial \survp_v}
+\;&=\;
+\frac{\survp^{(k)}_v (1 - \survp^{(k)}_v)}{\survp_v (1 - \survp_v)},
+&
+\frac{\partial \survp^{(k)}_v}{\partial \survq_v} \;&=\; 0,
+\label{eq:jac-pk-p}\\
+\frac{\partial \survq^{(k)}_v}{\partial \survq_v}
+\;&=\;
+\frac{\survq^{(k)}_v (1 - \survq^{(k)}_v)}{\survq_v (1 - \survq_v)},
+&
+\frac{\partial \survq^{(k)}_v}{\partial \survp_v} \;&=\; 0.
+\label{eq:jac-pk-q}
+\end{align}
+$\partial \rate^{(k)}_v / \partial \rate_v = 1$ since the gain is
+unshifted in both parameterisations.
+\end{proposition}
+\begin{proof}
+From \eqref{eq:shift-p},
+$\survp^{(k)}_v = \sigma(\logit \survp_v + \Delta_\loss^{(k)})$,
+where $\sigma$ is the standard logistic. Differentiating with
+respect to $\survp_v$,
+\begin{equation*}
+\frac{\partial \survp^{(k)}_v}{\partial \survp_v}
+\;=\;
+\sigma'(\,\cdot\,) \cdot \frac{\partial \logit \survp_v}{\partial \survp_v}
+\;=\;
+\survp^{(k)}_v (1 - \survp^{(k)}_v) \cdot \frac{1}{\survp_v (1 - \survp_v)},
+\end{equation*}
+which is \eqref{eq:jac-pk-p}. The $\survq$ identity is analogous.
+$\square$
+\end{proof}
+
+\subsection{Putting it together}
+
+\begin{theorem}[Base-rate gradient]\label{thm:base-grad}
+For each base parameter $\phi \in \{\rate_v, \loss_v, \dup_v, \edgelen_v\}$,
+\begin{equation}
+\frac{\partial \Ll}{\partial \phi}
+\;=\;
+\sum_{f=1}^F \sum_{k=1}^K \gamma_{f,k}\,
+   G^{(k)}_{f,v}\, \cdot\, J^{(k)}_{\phi,v},
+\label{eq:base-grad}
+\end{equation}
+where $G^{(k)}_{f,v} := \partial \log L_{f,k} / \partial \phi^{(k)}_v$ is
+the per-category per-family single-rate gradient
+\eqref{eq:base-grad-kernel} (computed by
+\texttt{recount\_gradient\_native} at $\theta^{(k)}$), and
+$J^{(k)}_{\phi,v} := \partial \phi^{(k)}_v / \partial \phi_v$ is the
+Jacobian factor of Proposition~\ref{prop:base-jac-rate} or
+Proposition~\ref{prop:base-jac-surv} depending on parameterisation.
+\end{theorem}
+\begin{proof}
+By Corollary~\ref{cor:resp-LL},
+$\partial\Ll/\partial\phi = \sum_{f,k}\gamma_{f,k}\partial\log L_{f,k}/\partial\phi$.
+Each summand factors via the chain
+$\phi \xrightarrow{\text{shift}} \phi^{(k)}_v \xrightarrow{\text{GLD}}\log L_{f,k}$:
+the GLD factor is $G^{(k)}_{f,v}$, the shift factor is
+$J^{(k)}_{\phi,v}$. $\square$
+\end{proof}
+
+% =================================================================
+\section{Gradient with respect to shifts}
+\label{sec:shift-grad}
+% =================================================================
+
+Each shift parameter $\Delta^{(k)}$ ($k \ge 2$) influences only
+category-$k$'s likelihood, so the chain rule \emph{only} involves
+the per-category gradient at $k$ weighted by
+$\gamma_{f,k}$.
+
+\begin{theorem}[Shift gradient, rate-domain]\label{thm:shift-grad-rate}
+Under the rate-domain parameterisation
+\eqref{eq:shift-t}--\eqref{eq:shift-lam}, for $k\in\{2,\dots,K\}$,
+\begin{align}
+\frac{\partial \Ll}{\partial \Delta_\loss^{(k)}}
+&\;=\;
+\sum_{f=1}^F \gamma_{f,k} \sum_{v\in V}
+   \frac{\partial \log L_{f,k}}{\partial \edgelen^{(k)}_v}\; \edgelen^{(k)}_v,
+\label{eq:shift-loss-grad-rate}\\
+\frac{\partial \Ll}{\partial \Delta_\dup^{(k)}}
+&\;=\;
+\sum_{f=1}^F \gamma_{f,k} \sum_{v\in V}
+   \frac{\partial \log L_{f,k}}{\partial \dup^{(k)}_v}\; \dup^{(k)}_v.
+\label{eq:shift-dup-grad-rate}
+\end{align}
+\end{theorem}
+\begin{proof}
+Under the rate-domain shift,
+$\partial \edgelen^{(k)}_v / \partial \Delta_\loss^{(k)} = \edgelen_v \exp(\Delta_\loss^{(k)}) = \edgelen^{(k)}_v$,
+and similarly $\partial \dup^{(k)}_v / \partial \Delta_\dup^{(k)} = \dup^{(k)}_v$.
+Apply Proposition~\ref{prop:resp-id} restricted to the only
+contributing category ($k'=k$), sum over all nodes $v$ via the chain
+rule. $\square$
+\end{proof}
+
+\begin{theorem}[Shift gradient, survival-domain]\label{thm:shift-grad-surv}
+Under the survival-domain parameterisation
+\eqref{eq:shift-p}--\eqref{eq:shift-q}, for $k\in\{2,\dots,K\}$,
+\begin{align}
+\frac{\partial \Ll}{\partial \Delta_\loss^{(k)}}
+&\;=\;
+\sum_{f=1}^F \gamma_{f,k} \sum_{v\in V}
+   \frac{\partial \log L_{f,k}}{\partial \survp^{(k)}_v}\;
+   \survp^{(k)}_v(1 - \survp^{(k)}_v),
+\label{eq:shift-loss-grad-surv}\\
+\frac{\partial \Ll}{\partial \Delta_\dup^{(k)}}
+&\;=\;
+\sum_{f=1}^F \gamma_{f,k} \sum_{v\in V}
+   \frac{\partial \log L_{f,k}}{\partial \survq^{(k)}_v}\;
+   \survq^{(k)}_v(1 - \survq^{(k)}_v).
+\label{eq:shift-dup-grad-surv}
+\end{align}
+\end{theorem}
+\begin{proof}
+Under the survival-domain shift,
+$\partial \survp^{(k)}_v / \partial \Delta_\loss^{(k)}
+= \sigma'(\logit\survp_v + \Delta_\loss^{(k)})
+= \survp^{(k)}_v (1 - \survp^{(k)}_v)$,
+summed over $v$ via the chain rule as in
+Theorem~\ref{thm:shift-grad-rate}. $\square$
+\end{proof}
+
+\noindent The rate-domain form
+\eqref{eq:shift-loss-grad-rate}--\eqref{eq:shift-dup-grad-rate} is
+the form implemented in
+\texttt{logistic\_shift\_gradient.py:268,~273} and FD-validated by
+Lemma~\ref{lem:fd}.
+
+% =================================================================
+\section{Gradient with respect to softmax mixing weights}
+\label{sec:alpha-grad}
+% =================================================================
+
+\begin{theorem}[Softmax mixing gradient]\label{thm:alpha-grad}
+With $p_k = \exp\alpha_k / \sum_j \exp\alpha_j$ and $\alpha_1 \equiv 0$,
+the gradient of $\Ll$ with respect to $\alpha_j$ for $j\in\{2,\dots,K\}$ is
+\begin{equation}
+\frac{\partial \Ll}{\partial \alpha_j}
+\;=\;
+\sum_{f=1}^F (\gamma_{f,j} - p_j).
+\label{eq:alpha-grad}
+\end{equation}
+\end{theorem}
+\begin{proof}
+The softmax Jacobian gives
+$\partial p_k / \partial \alpha_j = p_k(\delta_{kj} - p_j)$. Then
+\begin{equation*}
+\frac{\partial L_f}{\partial \alpha_j}
+= \sum_k L_{f,k} \cdot p_k(\delta_{kj} - p_j)
+= L_{f,j} p_j - p_j \sum_k p_k L_{f,k}
+= p_j L_{f,j} - p_j L_f.
+\end{equation*}
+Dividing by $L_f$:
+$\partial \log L_f / \partial \alpha_j
+= p_j L_{f,j}/L_f - p_j = \gamma_{f,j} - p_j$. Summing over $f$
+gives \eqref{eq:alpha-grad}. $\square$
+\end{proof}
+
+\begin{remark}[Connection to EM]
+\label{rem:em-connection}
+\eqref{eq:alpha-grad} has zero expected value at the
+data-generating $\bm\Phi$: $\E[\gamma_{f,j}] = p_j$ under the
+mixture, so setting the gradient to zero gives
+$\hat p_j = (1/F)\sum_f \gamma_{f,j}$, which is exactly the EM
+M-step update for mixing weights.  A BFGS optimiser using
+\eqref{eq:alpha-grad} follows the same direction as continuous EM
+on the weight subspace, without the discrete E/M alternation.
+\end{remark}
+
+% =================================================================
+\section{$\Om_{\min}$-correction propagation}
+\label{sec:l0-grad}
+% =================================================================
+
+The corrected log-likelihood (CM09 \emph{cor:loglik.d}; Cs26 SI Thm 5)
+is
+\begin{equation}
+\Ll^{\mathrm{corr}}(\bm\Phi)
+\;:=\;
+\Ll(\bm\Phi) \;-\; F \log\bigl(1 - L(0)_{\mathrm{mix}}(\bm\Phi)\bigr),
+\label{eq:Lcorr}
+\end{equation}
+where the mixture $L(0)$ is the weighted average
+\begin{equation}
+L(0)_{\mathrm{mix}}(\bm\Phi)
+\;:=\;
+\sum_{k=1}^K p_k \cdot L(0)(\theta^{(k)}).
+\label{eq:L0mix}
+\end{equation}
+
+\begin{proposition}[$L(0)$-gradient, mixture]\label{prop:L0-grad}
+Let $L_0^{(k)} := L(0)(\theta^{(k)})$. For any parameter $\phi$,
+\begin{equation}
+\frac{\partial L(0)_{\mathrm{mix}}}{\partial \phi}
+\;=\;
+\sum_{k=1}^K p_k\frac{\partial L_0^{(k)}}{\partial \phi}
+\;+\; \mathbf{1}\{\phi \in \bm\alpha\} \cdot
+      \sum_{k=1}^K L_0^{(k)}\frac{\partial p_k}{\partial \phi}.
+\label{eq:L0mix-grad}
+\end{equation}
+The first sum uses the per-category $\partial L_0^{(k)}/\partial \phi$
+from the existing native analytical $L(0)$-gradient kernel
+(\texttt{recount.unobserved\_outside.compute\_L0\_gradient\_analytical}),
+combined with the LogisticShift Jacobian
+(Proposition~\ref{prop:base-jac-rate} or
+Proposition~\ref{prop:base-jac-surv}) when $\phi$ is a base rate or a
+shift.
+
+When $\phi = \alpha_j$, the second sum evaluates to
+$p_j(L_0^{(j)} - L(0)_{\mathrm{mix}})$ (using the softmax Jacobian
+as in Theorem~\ref{thm:alpha-grad}).
+\end{proposition}
+\begin{proof}
+Direct derivative of \eqref{eq:L0mix} via product rule. $\square$
+\end{proof}
+
+\begin{corollary}[Full corrected gradient]\label{cor:full-grad}
+The full corrected-LL gradient is
+\begin{equation}
+\frac{\partial \Ll^{\mathrm{corr}}}{\partial \phi}
+\;=\;
+\frac{\partial \Ll}{\partial \phi}
+\;+\;
+\frac{F}{1 - L(0)_{\mathrm{mix}}}
+\cdot \frac{\partial L(0)_{\mathrm{mix}}}{\partial \phi},
+\label{eq:corr-grad}
+\end{equation}
+combining \eqref{eq:base-grad},
+\eqref{eq:shift-loss-grad-rate}--\eqref{eq:shift-dup-grad-rate}
+(or their survival-domain counterparts),
+\eqref{eq:alpha-grad}, and \eqref{eq:L0mix-grad}.
+\end{corollary}
+
+% =================================================================
+\section{Sub-critical Yule logit reparameterisation}
+\label{sec:bounded-dup}
+% =================================================================
+
+The closed-form gradients above are stated for the
+\emph{unconstrained} model: each base $\dup_v \in (0,\infty)$ is a
+free parameter. The production fit
+(\texttt{validation/mixture\_ml.py --bounded}) wraps the model in an
+extra reparameterisation that constrains
+$\dup_v \in (0, \mathrm{Q})$ via
+\begin{equation}
+\dup_v \;=\; \mathrm{Q} \cdot \sigma(\theta_v),
+\qquad
+\theta_v \;=\; \logit\bigl(\dup_v / \mathrm{Q}\bigr) \in \R,
+\label{eq:bounded-dup}
+\end{equation}
+where $\mathrm{Q} = 1 - 2^{-30} \approx 1$ matches Cs\H{u}r\"os'
+Java $\mathtt{MAX\_PROB\_NOT1}$ default. The BFGS optimiser acts on
+$\theta_v$; the inner gradient kernel acts on $\dup_v$.
+
+This adds one multiplicative Jacobian on the dup block only:
+\begin{equation}
+\frac{\partial \Ll^{\mathrm{corr}}}{\partial \theta_v}
+\;=\;
+\frac{\partial \Ll^{\mathrm{corr}}}{\partial \dup_v}
+\cdot
+\frac{\partial \dup_v}{\partial \theta_v}
+\;=\;
+\frac{\partial \Ll^{\mathrm{corr}}}{\partial \dup_v}
+\cdot \dup_v\,\bigl(1 - \dup_v/\mathrm{Q}\bigr).
+\label{eq:bounded-dup-jac}
+\end{equation}
+Applied in
+\texttt{validation/mixture\_ml.py:154--156} via
+\texttt{validation.\_shared.\_dup\_jacobian} immediately before
+returning the gradient to the optimiser. The base, shift, alpha, and
+$L(0)$ gradient kernels above are unchanged; only the dup base-rate
+sub-block picks up \eqref{eq:bounded-dup-jac}. The shift block
+$\Delta_\dup^{(k)}$ is \emph{not} bounded: it lives in $\R$
+unchanged.
+
+% =================================================================
+\section{Algorithm and complexity}
+\label{sec:algo}
+% =================================================================
+
+\begin{algorithm}
+\caption{Mixture corrected-LL and gradient}
+\label{alg:mix}
+\begin{algorithmic}[1]
+\State \textbf{Input:} tree $\Tree$, profiles $\{\Prof_f\}_{f=1}^F$,
+        parameters $\bm\Phi = (\bm\theta, \{\Delta^{(k)}\}_{k=2}^K, \bm\alpha)$.
+\State Compute $\bm p$ from $\bm\alpha$ via softmax \eqref{eq:softmax}.
+\For{$k = 1, \dots, K$}
+  \State Derive $\theta^{(k)}$ from $\theta$ and $\Delta^{(k)}$
+         via \texttt{derive\_category\_rates}.
+  \State Call $\texttt{recount\_gradient\_native}(\theta^{(k)}, \Prof, \Om_{\min})$
+         $\to$ per-family $\log L_{f,k}$ and per-rate gradients
+         $G^{(k)}_{f,v}$, plus $L_0^{(k)}$ and
+         $\partial L_0^{(k)}/\partial\cdot$.
+\EndFor
+\State Compute mixture $L_f = \sum_k p_k L_{f,k}$ and responsibilities
+        $\gamma_{f,k}$ via \eqref{eq:resp}.
+\State Aggregate base-rate gradient via \eqref{eq:base-grad}.
+\State Aggregate shift gradient via
+        \eqref{eq:shift-loss-grad-rate}--\eqref{eq:shift-dup-grad-rate}.
+\State Aggregate mixing-weight gradient via \eqref{eq:alpha-grad}.
+\State Apply $\Om_{\min}$-correction via \eqref{eq:corr-grad}.
+\State Apply Yule logit Jacobian \eqref{eq:bounded-dup-jac}
+       to the dup block if \texttt{--bounded}.
+\State \Return $(\Ll^{\mathrm{corr}}, \nabla\Ll^{\mathrm{corr}})$.
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Complexity.} Per evaluation: $K$ calls to the per-category
+gradient kernel ($\mathcal{O}(KFW^2)$ where $W$ is the max profile
+copy number) plus $\mathcal{O}(KF)$ for responsibility aggregation
+and $\mathcal{O}(KFN)$ for the per-node aggregation steps in
+\eqref{eq:base-grad} and \eqref{eq:shift-loss-grad-rate}. The
+dominant cost is the per-category kernel; with $K=2$--$4$ (the
+biologically interpretable regime), the mixture fit is
+$\mathcal{O}(K)$ slower than $K=1$, with no new $\mathcal{O}(W^2)$
+kernels required.
+
+% =================================================================
+\section{Connection to EM}
+\label{sec:em}
+% =================================================================
+
+The gradient flow induced by \eqref{eq:corr-grad} coincides with the
+direction of the EM updates:
+\begin{itemize}[leftmargin=*]
+\item The \textbf{E-step} computes responsibilities
+$\gamma_{f,k}$ (eq.~\eqref{eq:resp}).
+\item The \textbf{M-step for base rates} solves the weighted-ML
+problem
+$\arg\max_\theta \sum_f \sum_k \gamma_{f,k}\log L_f(\theta^{(k)})$,
+whose first-order condition is exactly \eqref{eq:base-grad} = 0.
+\item The \textbf{M-step for mixing weights} is
+$\hat p_j = (1/F)\sum_f \gamma_{f,j}$, which is the
+zero of \eqref{eq:alpha-grad}.
+\end{itemize}
+A BFGS optimiser using \eqref{eq:corr-grad} therefore traverses the
+EM update directions continuously, without the discrete E/M
+alternation. Empirically this is faster on smooth objectives and
+avoids the EM step-size pathology near boundary categories (one
+$\gamma_{f,k}$ approaching 0 or 1).
+
+% =================================================================
+\section{Validation}
+\label{sec:validation}
+% =================================================================
+
+\begin{lemma}[$K=1$ reduction]\label{lem:k1}
+With $K=1$ and $\Delta_\loss^{(1)} = \Delta_\dup^{(1)} = 0$, all
+category-derived rates equal the base rates: $\theta^{(1)} = \theta$.
+Then $\gamma_{f,1} = 1$, the rate-domain Jacobians
+\eqref{eq:rate-jac} all equal $1$, the survival-domain Jacobians
+\eqref{eq:jac-pk-p}--\eqref{eq:jac-pk-q} all equal $1$, and
+\eqref{eq:base-grad} collapses to the single-rate gradient. The
+corrected gradient \eqref{eq:corr-grad} matches
+\texttt{recount.ml.\_gradient\_raw\_native} bit-for-bit.
+\end{lemma}
+
+\begin{lemma}[Finite-difference]\label{lem:fd}
+For any $\bm\Phi^\star$, the central-difference approximation
+\begin{equation*}
+\frac{\partial \Ll}{\partial \phi}
+\;\approx\;
+\frac{\Ll(\bm\Phi^\star + \epsilon e_\phi) - \Ll(\bm\Phi^\star - \epsilon e_\phi)}{2\epsilon}
+\end{equation*}
+with $\epsilon = 10^{-5}$ agrees with the analytical gradient
+\emph{in the rate-level parameterisation}
+(Proposition~\ref{prop:base-jac-rate}) to relative tolerance
+$\sim 10^{-9}$ on Williams2017 $K=2$ data
+($F=40$ subsampled, $\Delta = (0.3, -0.4)$, $\bm\alpha = (0, 0.2)$).
+The check is automated as a pytest regression test
+(\texttt{tests/test\_mixture\_gradient\_fd.py}) so future edits to
+\texttt{mixture\_gradient\_native} or \texttt{derive\_category\_rates}
+cannot silently regress.
+\end{lemma}
+
+\begin{lemma}[Java cross-check]\label{lem:java}
+The Java reference \texttt{count.model.RateVariationModel} computes
+the same mixture log-likelihood (and the same softmax mixing-weight
+gradient) when configured with matching $\bm\Delta, \bm p$ \emph{in
+the survival-domain parameterisation}. (No stored arc269 / Williams
+dataset uses $K > 1$, so this can only be cross-checked on synthetic
+input.) Cross-checking the rate-domain implementation against the
+Java reference at $K>1$ with non-zero shifts requires translating
+$\bm\Delta$ between the two parameterisations on a per-edge basis
+through the survival map and its inverse, which is computationally
+heavier but mathematically straightforward.
+\end{lemma}
+
+% =================================================================
+\section*{References}
+% =================================================================
+
+\begin{description}[leftmargin=2em]
+\item[CM09] Cs\H{u}r\"os, M.\ \& Mikl\'os, I.\ (2009).
+  Streamlining and large ancestral genomes in Archaea inferred with
+  a phylogenetic birth-and-death model.
+  \emph{Mol.\ Biol.\ Evol.}\ 26, 2087--2095. Supplement, theorems
+  \emph{tm:lik.rec.finite}, \emph{tm:olik.rec}, \emph{tm:survival.invert},
+  \emph{tm:Ld}, \emph{cor:loglik.d}.
+
+\item[Cs21] Cs\H{u}r\"os, M.\ (2021).
+  arXiv:2107.11440. Analytical gradient of the GLD likelihood via
+  conserved-copy decomposition. Implements the per-category
+  per-rate gradient kernel used in $G^{(k)}_{f,v}$.
+
+\item[Cs26] Cs\H{u}r\"os, M.\ (2026). \emph{Reconstructing ancient
+  genomes from gene counts}, PNAS Supplementary Information,
+  Theorems 3--5 and Algorithms Uinner, Uouter, unobservedNodePosteriors
+  (Figs.\ S11--S13). Provides the $\Om_{\min}$-corrected $L(0)$
+  recursion and its gradient.
+\end{description}
+
+\end{document}

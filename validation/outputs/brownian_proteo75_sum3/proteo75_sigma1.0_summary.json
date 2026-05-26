@@ -1,0 +1,31 @@
+{
+  "F_original": 90243,
+  "F_kept": 6694,
+  "F": 6694,
+  "min_copies": 1,
+  "filter": "sum>=3 (over proteo75 leaves)",
+  "init": "warm_start_from_proteo75_sum2",
+  "final": {
+    "ll": -171456.327562321,
+    "L0": 0.12379572204114217,
+    "root_copies_corr": 2706.222893338992,
+    "root_families_corr": 1887.8200340180529,
+    "copies_per_family": 1.4335174140402798
+  },
+  "wall_s": 36.22187685966492,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 16,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "min_copies_override": 1,
+    "profile_filter": "sum>=3 over proteo75 leaves",
+    "init_mode": "warm_start_from_proteo75_sum2"
+  }
+}

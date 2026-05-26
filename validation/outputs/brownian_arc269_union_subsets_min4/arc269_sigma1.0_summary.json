@@ -1,0 +1,30 @@
+{
+  "F_original": 90243,
+  "F_kept": 11148,
+  "F": 11148,
+  "min_copies": 1,
+  "filter": "union of per-subset sum>=4 families (dpann80, proteo75, eury114, ed194)",
+  "final": {
+    "ll": -580884.4909576722,
+    "L0": 0.04324300399210609,
+    "root_copies_corr": 2539.5884687046578,
+    "root_families_corr": 1857.8800636176059,
+    "copies_per_family": 1.366928101784811
+  },
+  "wall_s": 469.6559998989105,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 16,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "min_copies_override": 1,
+    "profile_filter": "union of (sum>=4 over each of dpann80/proteo75/eury114/ed194 leaves)"
+  }
+}

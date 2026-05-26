@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "recount"
+version = "0.1.0"
+description = "Phylogenetic gain-loss-duplication likelihood and gradient — a Python port of M. Csűrös' Count, with NumPy and PyTorch backends."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.22",
+    "scipy>=1.8",
+]
+
+[project.optional-dependencies]
+torch = ["torch>=2.0"]
+gpu = ["torch>=2.0", "triton>=2.0"]
+test = ["pytest>=7", "torch>=2.0"]
+notebook = ["jupyter", "matplotlib"]
+
+[project.urls]
+Homepage = "https://github.com/ssolo/recount"
+Reference = "https://arxiv.org/abs/2107.11440"
+"Original Java" = "https://github.com/laszlocsuros/count"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["recount*"]
+exclude = ["tests*", "examples*"]
+
+[project.scripts]
+recount = "recount.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra -q"

@@ -1,0 +1,6 @@
+# Pool queue: deeper-cycling cold ML (1 start, 200 iters/cycle, 40 cycles)
+# on the 4 focal arc269 subsets — targets Csurös' published per-subset LL.
+dpann80 csuros_match
+proteo75 csuros_match
+eury114 csuros_match
+ed194 csuros_match
