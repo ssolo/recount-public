@@ -1,0 +1,87 @@
+{
+  "seed": 2025,
+  "F": 90243,
+  "min_copies": 1,
+  "phase_A_subset_anc_summary": {
+    "dpann80": {
+      "rates_path": "validation/outputs/brownian_dpann80/dpann80_sigma1.0_final_rates.npz",
+      "subset_root_arc_node": 347,
+      "mean": 0.009555983937139046,
+      "median": 0.0,
+      "q90": 2.516455565896074e-05,
+      "max": 5.515367190269989,
+      "wall_s": 5.879590749740601
+    },
+    "proteo75": {
+      "rates_path": "validation/outputs/brownian_proteo75/proteo75_sigma1.0_final_rates.npz",
+      "subset_root_arc_node": 535,
+      "mean": 0.026853087096499664,
+      "median": 0.0,
+      "q90": 0.002742623842762779,
+      "max": 11.772857695243797,
+      "wall_s": 5.862691164016724
+    },
+    "eury114": {
+      "rates_path": "validation/outputs/brownian_eury114/eury114_sigma1.0_final_rates.npz",
+      "subset_root_arc_node": 461,
+      "mean": 0.01877293089119672,
+      "median": 0.0,
+      "q90": 5.2912455941396486e-05,
+      "max": 5.93876420174748,
+      "wall_s": 5.907045125961304
+    },
+    "ed194": {
+      "rates_path": "validation/outputs/brownian_ed194/ed194_sigma1.0_final_rates.npz",
+      "subset_root_arc_node": 461,
+      "mean": 0.02144109753078399,
+      "median": 5.6804281843420875e-09,
+      "q90": 0.00011289691196841846,
+      "max": 7.132319011399203,
+      "wall_s": 6.098918914794922
+    }
+  },
+  "phase_B_bm_fit": {
+    "branch_lengths": {
+      "root-N": 1.0,
+      "root-proteo75": 1.0,
+      "N-dpann80": 1.0,
+      "N-eury114": 1.0
+    },
+    "sigma2": 0.0022904499407897768,
+    "root_mean_log1p": 0.014521849542495326,
+    "root_mean_copies": 0.014627803862524935,
+    "root_post_var_log1p": 0.0013742699644738662,
+    "per_family_root_log1p": {
+      "mean": 0.014521849542495326,
+      "median": 6.566982046978699e-07,
+      "q90": 0.0025937373607176494,
+      "max": 2.1020995703801444
+    },
+    "per_family_root_copies": {
+      "mean": 0.020486903557183654,
+      "median": 6.566984203241831e-07,
+      "q90": 0.0025971040077968324,
+      "max": 7.183333372676546
+    },
+    "n_families_inferred_at_root_positive": 1214,
+    "root_count_rule": "poisson"
+  },
+  "phase_C_simulation": {
+    "real_recon_under_assembled": {
+      "ll": -1527291.9069681226,
+      "L0": 0.0008726745487151972,
+      "F": 90243.0,
+      "min_copies": 1.0,
+      "root_copies_obs": 2.318438534193964e-14,
+      "root_copies_corr": 2.318438534193964e-14,
+      "root_families_obs": 0.0,
+      "root_families_corr": 0.0,
+      "copies_per_family": 0.02318438534193964
+    },
+    "real_leaf_sum_mean": 5.447591502942056,
+    "real_leaf_sum_median": 1.0,
+    "sim_leaf_sum_mean": 39.880312046363706,
+    "sim_leaf_sum_median": 25.0,
+    "n_families_simulated_below_omin": 0
+  }
+}

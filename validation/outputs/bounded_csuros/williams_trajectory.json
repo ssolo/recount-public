@@ -1,0 +1,122 @@
+[
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 1,
+    "obj": 117523.07229358927,
+    "grad_inf": 154.70680811281548,
+    "iters": 100,
+    "nfev": 441,
+    "wall_s": 9.174499988555908
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 2,
+    "obj": 117185.79204720752,
+    "grad_inf": 61.64629585056998,
+    "iters": 39,
+    "nfev": 243,
+    "wall_s": 14.272401094436646
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 3,
+    "obj": 117107.56919258874,
+    "grad_inf": 96.74517999014151,
+    "iters": 19,
+    "nfev": 212,
+    "wall_s": 18.622956037521362
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 4,
+    "obj": 117107.20356661791,
+    "grad_inf": 87.19797844694403,
+    "iters": 3,
+    "nfev": 64,
+    "wall_s": 19.97739005088806
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 5,
+    "obj": 117103.40485101113,
+    "grad_inf": 118.15809318749228,
+    "iters": 7,
+    "nfev": 134,
+    "wall_s": 22.76475477218628
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 6,
+    "obj": 117103.40485101113,
+    "grad_inf": 118.1580931874927,
+    "iters": 1,
+    "nfev": 38,
+    "wall_s": 23.56724190711975
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 7,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.38116946039138,
+    "iters": 7,
+    "nfev": 124,
+    "wall_s": 26.168983936309814
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 8,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.38116946039105,
+    "iters": 1,
+    "nfev": 34,
+    "wall_s": 26.892775058746338
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 9,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.38116946039092,
+    "iters": 1,
+    "nfev": 34,
+    "wall_s": 27.626300811767578
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 10,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.38116946039106,
+    "iters": 1,
+    "nfev": 34,
+    "wall_s": 28.351622104644775
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 11,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.3811694603911,
+    "iters": 1,
+    "nfev": 34,
+    "wall_s": 29.073692083358765
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 12,
+    "obj": 117102.67437708161,
+    "grad_inf": 117.38116946039113,
+    "iters": 1,
+    "nfev": 34,
+    "wall_s": 29.800719022750854
+  }
+]

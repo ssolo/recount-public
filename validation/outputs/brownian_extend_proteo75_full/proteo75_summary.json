@@ -1,0 +1,26 @@
+{
+  "label": "proteo75",
+  "init": "brownian_proteo75_full",
+  "F": 33547,
+  "min_copies": 1,
+  "filter": "full subset complement",
+  "final": {
+    "ll": -312203.97528973094,
+    "L0": 0.8079685680593602,
+    "root_copies_corr": 3694.9867600046036,
+    "root_families_corr": 2680.4581575306843,
+    "copies_per_family": 1.3784907440631464
+  },
+  "wall_s": 350.54858803749084,
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "none",
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

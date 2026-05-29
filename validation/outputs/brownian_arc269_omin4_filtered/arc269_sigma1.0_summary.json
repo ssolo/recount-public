@@ -1,0 +1,31 @@
+{
+  "label": "arc269",
+  "F_original": 90243,
+  "F_kept": 1973,
+  "F": 1973,
+  "min_copies": 1,
+  "filter": "max(profile)>=4",
+  "final": {
+    "ll": -212079.85526366267,
+    "L0": 0.009645954420452369,
+    "root_copies_corr": 1534.324827705707,
+    "root_families_corr": 836.1420028131922,
+    "copies_per_family": 1.8350050859106288
+  },
+  "wall_s": 213.50693702697754,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 16,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "min_copies_override": 1,
+    "profile_filter": "max>=4"
+  }
+}

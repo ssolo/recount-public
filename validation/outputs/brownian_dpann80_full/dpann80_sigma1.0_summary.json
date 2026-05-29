@@ -1,0 +1,29 @@
+{
+  "label": "dpann80",
+  "F": 28576,
+  "F_original": 90243,
+  "min_copies": 1,
+  "filter": "full subset complement (sum>=1 in subset leaves)",
+  "final": {
+    "ll": -237225.43822348147,
+    "L0": 0.8188820891366281,
+    "root_copies_corr": 2005.211121133562,
+    "root_families_corr": 1797.8887182498277,
+    "copies_per_family": 1.115314368892394
+  },
+  "wall_s": 329.32992005348206,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

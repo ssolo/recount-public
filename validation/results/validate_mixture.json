@@ -1,0 +1,34 @@
+{
+  "xml": "validation/Williams2017.countxml.gz",
+  "num_families": 100,
+  "max_sum": 4,
+  "ll_at_count_rates": -1242.0921687729403,
+  "bare_gld": {
+    "n_iter": 37,
+    "log_likelihood": -1000.6690968712484,
+    "delta_vs_count": 241.42307190169197
+  },
+  "logistic_shift_k1_identity": {
+    "n_iter": 57,
+    "log_likelihood": -1104.893758891705,
+    "delta_vs_count": 137.19840988123542
+  },
+  "logistic_shift_k2_warm": {
+    "n_iter": 32,
+    "log_likelihood": -1059.7149818958103,
+    "delta_vs_bare_gld": -59.045885024561926,
+    "delta_vs_count": 182.37718687713004,
+    "weights": [
+      0.4896558819864586,
+      0.5103441180135414
+    ],
+    "mod_p": [
+      -2.2465861901555386,
+      1.0876591318890185
+    ],
+    "mod_q": [
+      -0.16724854973156317,
+      0.6197039230883598
+    ]
+  }
+}

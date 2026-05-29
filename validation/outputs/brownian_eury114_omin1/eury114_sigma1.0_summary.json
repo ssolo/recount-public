@@ -1,0 +1,52 @@
+{
+  "label": "eury114",
+  "F": 7335,
+  "N": 227,
+  "leaves": 114,
+  "min_copies": 1,
+  "prior": {
+    "kind": "brownian",
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0,
+    "mu_dup_in_optimizer_coord": 1.8626451474962336e-09,
+    "dup_coord": "logit",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "sigma_root": 5.0
+  },
+  "final": {
+    "ll": -276812.1157057994,
+    "L0": 0.042281202533483955,
+    "F": 7335,
+    "min_copies": 1,
+    "root_copies_obs": 1517.0791341489128,
+    "root_copies_corr": 1517.0791341489128,
+    "root_families_obs": 1314.1718406023674,
+    "root_families_corr": 1314.1718406023674,
+    "copies_per_family": 1.1543993618471844
+  },
+  "log_prior_at_best": -513.7710174286166,
+  "neg_logp_at_best": 277325.88672322803,
+  "csuros_baseline": {
+    "ll": -277774.6398740369,
+    "L0": 0.10902429040700493,
+    "F": 7335,
+    "min_copies": 1,
+    "root_copies_obs": 1724.8884191281363,
+    "root_copies_corr": 1724.8884191281363,
+    "root_families_obs": 1441.344469247254,
+    "root_families_corr": 1441.344469247254,
+    "copies_per_family": 1.1967218495860077
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random",
+    "prior": "brownian"
+  }
+}

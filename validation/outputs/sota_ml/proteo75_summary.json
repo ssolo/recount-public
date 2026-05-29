@@ -1,0 +1,42 @@
+{
+  "label": "proteo75",
+  "F": 5179,
+  "N": 149,
+  "leaves": 75,
+  "min_copies": 4,
+  "final": {
+    "ll": -153058.75657962824,
+    "L0": 0.542037481498404,
+    "F": 5179,
+    "min_copies": 4,
+    "root_copies_obs": 2117.424541687033,
+    "root_copies_corr": 2120.272183710291,
+    "root_families_obs": 1540.3424160998004,
+    "root_families_corr": 1543.1894686181167,
+    "copies_per_family": 1.3739545446800745
+  },
+  "csuros_baseline": {
+    "ll": -154159.21158105732,
+    "L0": 0.5595116845747482,
+    "F": 5179,
+    "min_copies": 4,
+    "root_copies_obs": 3346.6225402102123,
+    "root_copies_corr": 3380.678941914137,
+    "root_families_obs": 2062.0007730340535,
+    "root_families_corr": 2095.9615309638084,
+    "copies_per_family": 1.6129489458518655
+  },
+  "fit_settings": {
+    "num_starts": 3,
+    "cycle_iters": 200,
+    "max_cycles": 25,
+    "polish_sigmas": [
+      0.05,
+      0.1
+    ],
+    "num_polish": 2,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random"
+  }
+}

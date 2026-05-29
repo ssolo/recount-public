@@ -1,0 +1,18 @@
+{
+  "xml": "validation/Williams2017.countxml.gz",
+  "num_families": 100,
+  "max_sum": 4,
+  "ll_at_count_rates": -1242.0921687729403,
+  "warm_start": {
+    "n_iter": 15,
+    "log_likelihood": -1095.4543042625091,
+    "delta_vs_count": 146.6378645104312,
+    "converged": false
+  },
+  "cold_start": {
+    "n_iter": 15,
+    "log_likelihood": -1092.7282762839325,
+    "delta_vs_count": 149.36389248900787,
+    "converged": false
+  }
+}

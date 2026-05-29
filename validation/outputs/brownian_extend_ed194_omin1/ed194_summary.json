@@ -1,0 +1,72 @@
+{
+  "label": "ed194",
+  "init": "brownian_ed194",
+  "F": 8855,
+  "N": 387,
+  "leaves": 194,
+  "min_copies": 1,
+  "final": {
+    "ll": -398005.9070261888,
+    "L0": 0.03926684820577557,
+    "root_copies_corr": 1713.7600753568722,
+    "root_families_corr": 1390.958322400819,
+    "copies_per_family": 1.232071477453682
+  },
+  "wall_s": 195.2442479133606,
+  "trajectory": [
+    {
+      "cycle": 1,
+      "obj": 398023.18567532743,
+      "grad_inf": 9.969146283665687,
+      "iters": 100,
+      "nfev": 260,
+      "wall_s": 33.4926483631134
+    },
+    {
+      "cycle": 2,
+      "obj": 398009.43282609165,
+      "grad_inf": 6.667357322807134,
+      "iters": 100,
+      "nfev": 301,
+      "wall_s": 71.29441714286804
+    },
+    {
+      "cycle": 3,
+      "obj": 398007.3527339293,
+      "grad_inf": 2.5546715401158537,
+      "iters": 100,
+      "nfev": 354,
+      "wall_s": 112.79408407211304
+    },
+    {
+      "cycle": 4,
+      "obj": 398006.36871474603,
+      "grad_inf": 1.2572655348548691,
+      "iters": 100,
+      "nfev": 347,
+      "wall_s": 152.75235605239868
+    },
+    {
+      "cycle": 5,
+      "obj": 398005.9070261888,
+      "grad_inf": 0.9791363372192293,
+      "iters": 100,
+      "nfev": 362,
+      "wall_s": 195.2440960407257
+    }
+  ],
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "init_rates_path": "validation/outputs/brownian_ed194_omin1/ed194_sigma1.0_final_rates.npz",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "polish_sigmas": [],
+    "num_polish": 0,
+    "num_starts": 1,
+    "prior": "none"
+  }
+}
