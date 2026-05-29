@@ -1,0 +1,18 @@
+{
+  "native_version": "recount-native 0.1.0",
+  "arc269_1t_ll_ms": 2256.6399574279785,
+  "arc269_1t_grad_ms": 5522.90415763855,
+  "arc269_1t_bs_ms": 5528.808116912842,
+  "arc269_4t_ll_ms": 587.6893997192383,
+  "arc269_4t_grad_ms": 1428.7103017171223,
+  "arc269_4t_bs_ms": 1425.7100423177083,
+  "arc269_16t_ll_ms": 204.67503865559897,
+  "arc269_16t_grad_ms": 504.46931521097815,
+  "arc269_16t_bs_ms": 505.2963892618815,
+  "williams_16t_ll_ms": 9.529685974121094,
+  "williams_16t_bs_ms": 18.355989456176758,
+  "java_williams_ll_ms": 227.0,
+  "java_williams_bs_ms": 934.0,
+  "williams_speedup_ll": 23.8203022236455,
+  "williams_speedup_bs": 50.88257444415292
+}

@@ -1,0 +1,26 @@
+{
+  "label": "ed194",
+  "init": "brownian_ed194_full",
+  "F": 62435,
+  "min_copies": 1,
+  "filter": "full subset complement",
+  "final": {
+    "ll": -753076.0839176233,
+    "L0": 0.793462310660813,
+    "root_copies_corr": 4849.781764523544,
+    "root_families_corr": 3748.1887017738045,
+    "copies_per_family": 1.2939001075982162
+  },
+  "wall_s": 1022.1323621273041,
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "none",
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

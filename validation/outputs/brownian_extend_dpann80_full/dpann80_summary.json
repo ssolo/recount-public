@@ -1,0 +1,26 @@
+{
+  "label": "dpann80",
+  "init": "brownian_dpann80_full",
+  "F": 28576,
+  "min_copies": 1,
+  "filter": "full subset complement",
+  "final": {
+    "ll": -236759.51822843088,
+    "L0": 0.8258461240953722,
+    "root_copies_corr": 2018.0255674013235,
+    "root_families_corr": 1821.183859061794,
+    "copies_per_family": 1.1080844788735031
+  },
+  "wall_s": 296.2233736515045,
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "none",
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

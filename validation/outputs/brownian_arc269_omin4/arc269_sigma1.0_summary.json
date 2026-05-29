@@ -1,0 +1,42 @@
+{
+  "label": "arc269",
+  "F": 90243,
+  "N": 537,
+  "leaves": 269,
+  "min_copies": 4,
+  "prior": {
+    "kind": "brownian",
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0,
+    "mu_dup_in_optimizer_coord": 1.8626451474962336e-09,
+    "dup_coord": "logit",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "sigma_root": 5.0
+  },
+  "final": {
+    "ll": 744135.889762802,
+    "L0": 1.0,
+    "F": 90243,
+    "min_copies": 4,
+    "root_copies_obs": 33960.51052824633,
+    "root_copies_corr": 33960.51052824633,
+    "root_families_obs": 7276.666176565891,
+    "root_families_corr": 7276.666176565891,
+    "copies_per_family": 4.667042530769696
+  },
+  "log_prior_at_best": -62097.042413383446,
+  "neg_logp_at_best": -682038.8473494186,
+  "csuros_baseline": null,
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random",
+    "prior": "brownian"
+  }
+}

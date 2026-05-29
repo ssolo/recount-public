@@ -1,0 +1,99 @@
+{
+  "seed": 2025,
+  "F_real": 90243,
+  "F_sim": 90243,
+  "min_copies": 1,
+  "glue_nodes": [
+    536
+  ],
+  "glue_prior": {
+    "log_gain": {
+      "mu": -1.419768672245086,
+      "sd": 1.7205240138186821
+    },
+    "log_loss": {
+      "mu": 0.0,
+      "sd": 0.0
+    },
+    "log_dup": {
+      "mu": -2.1559320183726847,
+      "sd": 2.1619042700665267
+    },
+    "log_length": {
+      "mu": -1.91244648050402,
+      "sd": 1.4997873328325595
+    }
+  },
+  "subset_node_counts": {
+    "dpann80": 159,
+    "proteo75": 149,
+    "eury114": 225,
+    "ed194": 3
+  },
+  "subset_rate_source": {
+    "dpann80": "validation/outputs/map_sigma1/dpann80_sigma1.0_final_rates.npz",
+    "proteo75": "validation/outputs/brownian_extend_proteo75/proteo75_final_rates.npz",
+    "eury114": "validation/outputs/brownian_extend_eury114/eury114_final_rates.npz",
+    "ed194": "validation/outputs/brownian_extend_ed194/ed194_final_rates.npz"
+  },
+  "composite_rates_summary": {
+    "max_gain": 162.49143501802337,
+    "max_dup": 0.9999951010320138,
+    "min_length_nonroot": 1.4604900928296055e-05
+  },
+  "real_recon": {
+    "ll": -449576.5130923819,
+    "L0": 0.001189732299255629,
+    "F": 90243,
+    "min_copies": 1,
+    "root_copies_obs": 8.385406961424162e-16,
+    "root_copies_corr": 8.385406961424162e-16,
+    "root_families_obs": 0.0,
+    "root_families_corr": 0.0,
+    "copies_per_family": 0.0008385406961424162
+  },
+  "sim_recon": {
+    "ll": -1674953.7043240888,
+    "L0": 0.001189732299255629,
+    "F": 90243,
+    "min_copies": 1,
+    "root_copies_obs": 7.486672109512417e-15,
+    "root_copies_corr": 7.486672109512417e-15,
+    "root_families_obs": 0.0,
+    "root_families_corr": 0.0,
+    "copies_per_family": 0.007486672109512417
+  },
+  "real_summary": {
+    "F": 90243,
+    "leaf_sum_mean": 5.447591502942056,
+    "leaf_sum_median": 1.0,
+    "leaf_sum_max": 1044,
+    "leaf_sum_q90": 5.0,
+    "leaf_mean_min": 0.003656793324690004,
+    "leaf_mean_max": 0.06611039083363807,
+    "leaf_mean_mean": 0.02025126952766564,
+    "leaf_pres_mean": 0.015989953931489484,
+    "frac_singletons": 0.7496093879857717,
+    "frac_universal": 0.0
+  },
+  "sim_summary": {
+    "F": 90243,
+    "leaf_sum_mean": 38.763870881952066,
+    "leaf_sum_median": 24.0,
+    "leaf_sum_max": 543,
+    "leaf_sum_q90": 92.0,
+    "leaf_mean_min": 0.0015402856731270016,
+    "leaf_mean_max": 0.35873142515208933,
+    "leaf_mean_mean": 0.1441036092265876,
+    "leaf_pres_mean": 0.10965860989866806,
+    "frac_singletons": 0.005041942311315005,
+    "frac_universal": 0.0
+  },
+  "sim_root_counts": {
+    "mean": 0.0005651407865430005,
+    "sd": 0.024681023482562195,
+    "max": 2,
+    "frac_zero": 0.999457021597243
+  },
+  "wall_seconds": 83.87102484703064
+}

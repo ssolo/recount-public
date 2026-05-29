@@ -1,0 +1,72 @@
+{
+  "label": "dpann80",
+  "init": "brownian_dpann80",
+  "F": 3034,
+  "N": 159,
+  "leaves": 80,
+  "min_copies": 1,
+  "final": {
+    "ll": -94416.38621921836,
+    "L0": 0.012270713499483669,
+    "root_copies_corr": 2083.77599960924,
+    "root_families_corr": 1588.5219708167097,
+    "copies_per_family": 1.3117703361307018
+  },
+  "wall_s": 23.817060947418213,
+  "trajectory": [
+    {
+      "cycle": 1,
+      "obj": 94513.59436005252,
+      "grad_inf": 367.5816736517754,
+      "iters": 8,
+      "nfev": 146,
+      "wall_s": 3.8193042278289795
+    },
+    {
+      "cycle": 2,
+      "obj": 94416.38621921836,
+      "grad_inf": 213.6742823718218,
+      "iters": 27,
+      "nfev": 483,
+      "wall_s": 17.82400631904602
+    },
+    {
+      "cycle": 3,
+      "obj": 94416.38621921836,
+      "grad_inf": 213.67428237182148,
+      "iters": 3,
+      "nfev": 68,
+      "wall_s": 20.268280267715454
+    },
+    {
+      "cycle": 4,
+      "obj": 94416.38621921836,
+      "grad_inf": 213.67428237182148,
+      "iters": 2,
+      "nfev": 48,
+      "wall_s": 22.080944299697876
+    },
+    {
+      "cycle": 5,
+      "obj": 94416.38621921836,
+      "grad_inf": 213.67428237182162,
+      "iters": 2,
+      "nfev": 48,
+      "wall_s": 23.816915273666382
+    }
+  ],
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "init_rates_path": "validation/outputs/brownian_dpann80_omin1/dpann80_sigma1.0_final_rates.npz",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "polish_sigmas": [],
+    "num_polish": 0,
+    "num_starts": 1,
+    "prior": "none"
+  }
+}

@@ -1,0 +1,39 @@
+LACA CORE (P_root >= 0.5) = 1817
+LACA strict CORE (P_root >= 0.9) = 1511
+
+Absolute counts (number of LACA CORE families present at >= X% of subclade genomes):
+  subclade                L_S       any     >=10%     >=25%     >=50%     >=90%    >=100%    universal
+  DPANN (D80)              80      1556      966      556      271       30        1       1
+  Proteoarchaea (P75)      75      1808     1670     1271      716       75        1       1
+  Methanobacteriati (E114)  114      1802     1689     1382      850      246        1       1
+  Euryarchaeota (ED194)   194      1805     1631     1145      510       58        0       0
+
+Percentages of LACA CORE:
+  subclade                L_S       any     >=10%     >=25%     >=50%     >=90%    >=100%    universal
+  DPANN (D80)              80     85.6%    53.2%    30.6%    14.9%     1.7%     0.1%    0.06%
+  Proteoarchaea (P75)      75     99.5%    91.9%    70.0%    39.4%     4.1%     0.1%    0.06%
+  Methanobacteriati (E114)  114     99.2%    93.0%    76.1%    46.8%    13.5%     0.1%    0.06%
+  Euryarchaeota (ED194)   194     99.3%    89.8%    63.0%    28.1%     3.2%     0.0%    0.00%
+
+Cross-subclade presence of LACA CORE families (each row counts families present in N of 4 subclades):
+  present in 0 of 4 subclades:     0 (0.0 %)
+  present in 1 of 4 subclades:    12 (0.7 %)
+  present in 2 of 4 subclades:     1 (0.1 %)
+  present in 3 of 4 subclades:   259 (14.3 %)
+  present in 4 of 4 subclades:  1545 (85.0 %)
+
+Per-subclade extant genome size and LACA CORE retention (focus: median and lower tail):
+  G = total extant family count over full F=90,243 universe; r = fraction of LACA CORE retained at the leaf.
+  subclade                L_S  G_min  G_p10  G_p25  G_med  r_min  r_p10  r_p25  r_med
+  DPANN (D80)              80    321    582    724    890  0.086  0.141  0.165  0.203
+  Proteoarchaea (P75)      75    559   1049   1255   1419  0.130  0.282  0.403  0.452
+  Methanobacteriati (E114)  114    642   1155   1319   1642  0.177  0.323  0.447  0.524
+  Euryarchaeota (ED194)   194    321    721    930   1284  0.086  0.165  0.220  0.413
+
+LACA-total simple estimator (upper bound assuming all extant families are LACA-derived):
+  LACA_total ≈ G_extant / r,  using median G_extant and median r per subclade.  Reference: model LACA CORE = 1817.
+  subclade                G_med  r_med  LACA_total est  ratio to CORE
+  DPANN (D80)               890  0.203           4,377          2.41×
+  Proteoarchaea (P75)      1419  0.452           3,137          1.73×
+  Methanobacteriati (E114)   1642  0.524           3,136          1.73×
+  Euryarchaeota (ED194)    1284  0.413           3,109          1.71×

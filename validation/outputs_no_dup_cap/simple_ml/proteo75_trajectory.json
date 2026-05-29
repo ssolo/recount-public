@@ -1,0 +1,102 @@
+[
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 1,
+    "obj": 156974.02278852963,
+    "grad_inf": 458.06235548012796,
+    "iters": 23,
+    "nfev": 42,
+    "wall_s": 7.779776096343994
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 2,
+    "obj": 154368.07013623614,
+    "grad_inf": 39.02829364843558,
+    "iters": 200,
+    "nfev": 210,
+    "wall_s": 38.22805309295654
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 3,
+    "obj": 154344.75764106648,
+    "grad_inf": 1.1703283930117832,
+    "iters": 200,
+    "nfev": 205,
+    "wall_s": 67.58544588088989
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 4,
+    "obj": 154344.1858794734,
+    "grad_inf": 0.22295320401203084,
+    "iters": 200,
+    "nfev": 202,
+    "wall_s": 97.14221906661987
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 5,
+    "obj": 154344.1001487568,
+    "grad_inf": 0.14535982292311084,
+    "iters": 200,
+    "nfev": 203,
+    "wall_s": 126.118812084198
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 6,
+    "obj": 154344.08542892014,
+    "grad_inf": 0.03600398199679042,
+    "iters": 200,
+    "nfev": 203,
+    "wall_s": 155.31481194496155
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 7,
+    "obj": 154344.08282303254,
+    "grad_inf": 0.03393664008988317,
+    "iters": 200,
+    "nfev": 203,
+    "wall_s": 184.835932970047
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 8,
+    "obj": 154344.08107408966,
+    "grad_inf": 0.016983104634412407,
+    "iters": 200,
+    "nfev": 204,
+    "wall_s": 214.25007390975952
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 9,
+    "obj": 154344.07955444176,
+    "grad_inf": 0.026232392958656606,
+    "iters": 200,
+    "nfev": 203,
+    "wall_s": 243.79147601127625
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 10,
+    "obj": 154344.0783731075,
+    "grad_inf": 0.01330498125307686,
+    "iters": 200,
+    "nfev": 203,
+    "wall_s": 273.548867225647
+  }
+]

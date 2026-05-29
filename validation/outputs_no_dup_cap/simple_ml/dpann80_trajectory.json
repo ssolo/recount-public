@@ -1,0 +1,52 @@
+[
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 1,
+    "obj": 95029.79895927773,
+    "grad_inf": 173.01171071579432,
+    "iters": 24,
+    "nfev": 43,
+    "wall_s": 4.655277967453003
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 2,
+    "obj": 93879.05354623456,
+    "grad_inf": 27.827353317589193,
+    "iters": 37,
+    "nfev": 101,
+    "wall_s": 15.632515907287598
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 3,
+    "obj": 93856.5228645667,
+    "grad_inf": 9.140797381666925,
+    "iters": 4,
+    "nfev": 52,
+    "wall_s": 21.268544912338257
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 4,
+    "obj": 93856.5228645667,
+    "grad_inf": 9.140797381666985,
+    "iters": 0,
+    "nfev": 60,
+    "wall_s": 27.694551944732666
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 5,
+    "obj": 93856.5228645667,
+    "grad_inf": 9.140797381667042,
+    "iters": 0,
+    "nfev": 77,
+    "wall_s": 36.181065797805786
+  }
+]

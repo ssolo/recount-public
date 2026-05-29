@@ -1,0 +1,29 @@
+{
+  "label": "eury114",
+  "F": 37609,
+  "F_original": 90243,
+  "min_copies": 1,
+  "filter": "full subset complement (sum>=1 in subset leaves)",
+  "final": {
+    "ll": -469817.42481518985,
+    "L0": 0.6563282656723005,
+    "root_copies_corr": 1968.2691481584573,
+    "root_families_corr": 1731.8274255932458,
+    "copies_per_family": 1.1365273000479348
+  },
+  "wall_s": 764.6797859668732,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

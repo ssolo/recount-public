@@ -1,0 +1,15 @@
+{
+  "init": "brownian_arc269_omin4_sum4",
+  "F_original": 90243,
+  "F_kept": 11554,
+  "F": 11554,
+  "min_copies": 1,
+  "filter": "sum>=4",
+  "final": {
+    "ll": -587781.6519642739,
+    "L0": 0.04337138424901811,
+    "root_copies_corr": 2541.345338524962,
+    "root_families_corr": 1841.529774112157,
+    "copies_per_family": 1.380018598803379
+  }
+}

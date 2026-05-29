@@ -1,0 +1,39 @@
+{
+  "label": "ed194",
+  "F": 8855,
+  "N": 387,
+  "leaves": 194,
+  "min_copies": 4,
+  "final": {
+    "ll": -397028.0861488951,
+    "L0": 0.4335599293192919,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 2144.769786469433,
+    "root_copies_corr": 2146.6093065964174,
+    "root_families_obs": 1708.5258003200524,
+    "root_families_corr": 1710.3649934266539,
+    "copies_per_family": 1.2550591919539722
+  },
+  "csuros_baseline": {
+    "ll": -395601.1849513024,
+    "L0": 0.4297671901854408,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 1672.341645782588,
+    "root_copies_corr": 1692.3315696906375,
+    "root_families_obs": 1398.7307633161154,
+    "root_families_corr": 1418.6850012157706,
+    "copies_per_family": 1.1928874755427454
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "polish_sigmas": [],
+    "num_polish": 2,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random"
+  }
+}

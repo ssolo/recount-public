@@ -1,0 +1,38 @@
+{
+  "label": "proteo75",
+  "F": 5179,
+  "N": 149,
+  "leaves": 75,
+  "min_copies": 4,
+  "prior": {
+    "sigma": 1.0,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -154075.76722117342,
+    "L0": 0.5978924248912117,
+    "F": 5179,
+    "min_copies": 4,
+    "root_copies_obs": 3154.405859032148,
+    "root_copies_corr": 3183.1306576927614,
+    "root_families_obs": 2101.5257472951516,
+    "root_families_corr": 2130.195894284113,
+    "copies_per_family": 1.4942901102353803
+  },
+  "log_prior_at_best": -505.7473185689633,
+  "neg_logp_at_best": 154581.51453974238,
+  "csuros_baseline": {
+    "ll": -154159.21158105732,
+    "L0": 0.5595116845747482,
+    "F": 5179,
+    "min_copies": 4,
+    "root_copies_obs": 3346.6225402102123,
+    "root_copies_corr": 3380.678941914137,
+    "root_families_obs": 2062.000773034054,
+    "root_families_corr": 2095.961530963809,
+    "copies_per_family": 1.612948945851865
+  },
+  "source_rate_file": "validation/subsets_map/proteo75_map_rates.npz"
+}

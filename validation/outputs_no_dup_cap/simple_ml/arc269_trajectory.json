@@ -1,0 +1,82 @@
+[
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 1,
+    "obj": 1327163.8953067267,
+    "grad_inf": 7235.382082354387,
+    "iters": 5,
+    "nfev": 20,
+    "wall_s": 18.481772899627686
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 2,
+    "obj": 1156725.9913517034,
+    "grad_inf": 4837.634412192809,
+    "iters": 29,
+    "nfev": 79,
+    "wall_s": 74.57763290405273
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 3,
+    "obj": 1133355.5142359065,
+    "grad_inf": 51453.48602551841,
+    "iters": 15,
+    "nfev": 58,
+    "wall_s": 114.44027590751648
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 4,
+    "obj": 1129662.20960779,
+    "grad_inf": 17669.704131803956,
+    "iters": 4,
+    "nfev": 55,
+    "wall_s": 153.5744776725769
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 5,
+    "obj": 1129653.0967153278,
+    "grad_inf": 15910.922970369596,
+    "iters": 1,
+    "nfev": 62,
+    "wall_s": 197.20632982254028
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 6,
+    "obj": 1129652.8667291184,
+    "grad_inf": 13904.418661050837,
+    "iters": 1,
+    "nfev": 63,
+    "wall_s": 241.69011878967285
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 7,
+    "obj": 1129652.8667291184,
+    "grad_inf": 13904.418661050837,
+    "iters": 0,
+    "nfev": 75,
+    "wall_s": 293.7244749069214
+  },
+  {
+    "phase": "multistart",
+    "start": 1,
+    "cycle": 8,
+    "obj": 1129652.8667291184,
+    "grad_inf": 13904.418661050775,
+    "iters": 0,
+    "nfev": 62,
+    "wall_s": 336.7273459434509
+  }
+]

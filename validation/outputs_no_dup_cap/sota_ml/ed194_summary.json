@@ -1,0 +1,40 @@
+{
+  "label": "ed194",
+  "F": 8855,
+  "N": 387,
+  "leaves": 194,
+  "min_copies": 4,
+  "final": {
+    "ll": -395323.11930709746,
+    "L0": 0.4271542477786303,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 1943.8733077013364,
+    "root_copies_corr": 1970.295266454725,
+    "root_families_obs": 1484.4389617129593,
+    "root_families_corr": 1510.732721375738,
+    "copies_per_family": 1.3041984452818958
+  },
+  "csuros_baseline": {
+    "ll": -395601.1849513024,
+    "L0": 0.4297671901854408,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 1672.3416457825929,
+    "root_copies_corr": 1692.3315696906423,
+    "root_families_obs": 1398.7307633161156,
+    "root_families_corr": 1418.6850012157709,
+    "copies_per_family": 1.1928874755427488
+  },
+  "fit_settings": {
+    "num_starts": 3,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "polish_sigmas": [
+      0.05,
+      0.1
+    ],
+    "num_polish": 2,
+    "seed": 2031
+  }
+}

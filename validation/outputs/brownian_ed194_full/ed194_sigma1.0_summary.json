@@ -1,0 +1,29 @@
+{
+  "label": "ed194",
+  "F": 62435,
+  "F_original": 90243,
+  "min_copies": 1,
+  "filter": "full subset complement (sum>=1 in subset leaves)",
+  "final": {
+    "ll": -770197.7066614911,
+    "L0": 0.7827035499098934,
+    "root_copies_corr": 4809.874956564354,
+    "root_families_corr": 3666.279080280226,
+    "copies_per_family": 1.3119227563540306
+  },
+  "wall_s": 830.8469378948212,
+  "fit_settings": {
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "brownian",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "num_starts": 1,
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

@@ -1,0 +1,20 @@
+# Cold ML (csuros_match) for the 4 subsets that don't have a fresh
+# csuros_match on disk yet. arc269 csuros_match was promoted to the
+# immediate post_current_pool.txt queue (priority "invest cores in
+# arc269 cold + MAP before sota_ml"), so it's NOT here anymore.
+# williams already in flight separately.
+dpann80 csuros_match
+proteo75 csuros_match
+eury114 csuros_match
+ed194 csuros_match
+
+# K=2 LogisticShift mixture (bounded), now that mixture_ml.py is migrated
+# (commit bae92b8). Smoke-tested at LL=-90,511 on dpann80 K=2 (single-
+# component reference is -94,177 on the same data, so K=2 captures real
+# heterogeneity). arc269 K=2 deliberately skipped — would dominate wall
+# time at this dataset's family count; queue manually if needed.
+dpann80 mixture_K2
+williams mixture_K2
+proteo75 mixture_K2
+eury114 mixture_K2
+ed194 mixture_K2
