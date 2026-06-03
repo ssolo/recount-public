@@ -1,0 +1,39 @@
+{
+  "label": "williams",
+  "F": 5378,
+  "N": 119,
+  "leaves": 60,
+  "min_copies": 4,
+  "final": {
+    "ll": -117102.67437708161,
+    "L0": 0.8218914590277218,
+    "F": 5378,
+    "min_copies": 4,
+    "root_copies_obs": 1717.5831793593366,
+    "root_copies_corr": 1737.0566632216585,
+    "root_families_obs": 1341.0843801819444,
+    "root_families_corr": 1360.5343155849737,
+    "copies_per_family": 1.2767459396823782
+  },
+  "csuros_baseline": {
+    "ll": -117694.84071818793,
+    "L0": 0.8320121912743625,
+    "F": 5378,
+    "min_copies": 4,
+    "root_copies_obs": 1362.916514231307,
+    "root_copies_corr": 1365.421735851831,
+    "root_families_obs": 1091.5156400461292,
+    "root_families_corr": 1094.0205731840344,
+    "copies_per_family": 1.248076836323024
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "polish_sigmas": [],
+    "num_polish": 2,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random"
+  }
+}

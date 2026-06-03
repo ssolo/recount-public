@@ -1,0 +1,52 @@
+{
+  "label": "dpann80",
+  "F": 3034,
+  "N": 159,
+  "leaves": 80,
+  "min_copies": 1,
+  "prior": {
+    "kind": "brownian",
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0,
+    "mu_dup_in_optimizer_coord": 1.8626451474962336e-09,
+    "dup_coord": "logit",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "sigma_root": 5.0
+  },
+  "final": {
+    "ll": -94545.9357507562,
+    "L0": 0.013264980476909792,
+    "F": 3034,
+    "min_copies": 1,
+    "root_copies_obs": 2179.9049591460257,
+    "root_copies_corr": 2179.9049591460257,
+    "root_families_obs": 1627.6120179447282,
+    "root_families_corr": 1627.6120179447282,
+    "copies_per_family": 1.3393271462192242
+  },
+  "log_prior_at_best": -1004.0923784598366,
+  "neg_logp_at_best": 95550.02812921604,
+  "csuros_baseline": {
+    "ll": -95373.98667541175,
+    "L0": 0.04643817018308729,
+    "F": 3034,
+    "min_copies": 1,
+    "root_copies_obs": 1378.3070689834483,
+    "root_copies_corr": 1378.3070689834483,
+    "root_families_obs": 1192.4762364514295,
+    "root_families_corr": 1192.4762364514295,
+    "copies_per_family": 1.1558360886796488
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random",
+    "prior": "brownian"
+  }
+}

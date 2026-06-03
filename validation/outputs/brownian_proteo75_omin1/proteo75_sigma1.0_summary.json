@@ -1,0 +1,52 @@
+{
+  "label": "proteo75",
+  "F": 5179,
+  "N": 149,
+  "leaves": 75,
+  "min_copies": 1,
+  "prior": {
+    "kind": "brownian",
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0,
+    "mu_dup_in_optimizer_coord": 1.8626451474962336e-09,
+    "dup_coord": "logit",
+    "sigma_brownian_gain": 1.0,
+    "sigma_brownian_dup": 1.0,
+    "sigma_brownian_length": 1.0,
+    "sigma_root": 5.0
+  },
+  "final": {
+    "ll": -155973.78887667586,
+    "L0": 0.06726420705793192,
+    "F": 5179,
+    "min_copies": 1,
+    "root_copies_obs": 2821.221107840103,
+    "root_copies_corr": 2821.221107840103,
+    "root_families_obs": 1897.9372438379426,
+    "root_families_corr": 1897.9372438379426,
+    "copies_per_family": 1.486467014122726
+  },
+  "log_prior_at_best": -319.13638829734896,
+  "neg_logp_at_best": 156292.9252649732,
+  "csuros_baseline": {
+    "ll": -157253.77766512008,
+    "L0": 0.19936444903504208,
+    "F": 5179,
+    "min_copies": 1,
+    "root_copies_obs": 3346.622540210214,
+    "root_copies_corr": 3346.622540210214,
+    "root_families_obs": 2062.000773034054,
+    "root_families_corr": 2062.000773034054,
+    "copies_per_family": 1.6229977136652338
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random",
+    "prior": "brownian"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "label": "eury114",
+  "init": "brownian_eury114_full",
+  "F": 37609,
+  "min_copies": 1,
+  "filter": "full subset complement",
+  "final": {
+    "ll": -469045.43253767904,
+    "L0": 0.6574356693116507,
+    "root_copies_corr": 1876.7093952873993,
+    "root_families_corr": 1657.5408327297414,
+    "copies_per_family": 1.132225136316381
+  },
+  "wall_s": 524.5463659763336,
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 4,
+    "prior": "none",
+    "profile_filter": "subset_full_complement_mc1"
+  }
+}

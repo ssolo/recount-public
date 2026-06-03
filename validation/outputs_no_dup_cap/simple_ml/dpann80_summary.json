@@ -1,0 +1,37 @@
+{
+  "label": "dpann80",
+  "F": 3034,
+  "N": 159,
+  "leaves": 80,
+  "min_copies": 4,
+  "final": {
+    "ll": -93856.5228645667,
+    "L0": 0.5369621995691447,
+    "F": 3034,
+    "min_copies": 4,
+    "root_copies_obs": 1291.1857020304685,
+    "root_copies_corr": 1309.728437099185,
+    "root_families_obs": 988.572613591502,
+    "root_families_corr": 1007.0522706671596,
+    "copies_per_family": 1.3005565602185734
+  },
+  "csuros_baseline": {
+    "ll": -94146.94487405664,
+    "L0": 0.36363399416909054,
+    "F": 3034,
+    "min_copies": 4,
+    "root_copies_obs": 1378.3070689834474,
+    "root_copies_corr": 1395.5572508658793,
+    "root_families_obs": 1192.4762364514293,
+    "root_families_corr": 1209.6991070292922,
+    "copies_per_family": 1.1536399777073545
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 15,
+    "polish_sigmas": [],
+    "num_polish": 2,
+    "seed": 2031
+  }
+}

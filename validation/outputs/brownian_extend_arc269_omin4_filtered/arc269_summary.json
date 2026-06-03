@@ -1,0 +1,29 @@
+{
+  "label": "arc269",
+  "init": "brownian_arc269_omin4_filtered",
+  "F_original": 90243,
+  "F_kept": 1973,
+  "F": 1973,
+  "min_copies": 1,
+  "filter": "max(profile)>=4",
+  "final": {
+    "ll": -210576.94257588452,
+    "L0": 0.010118016112242043,
+    "root_copies_corr": 1455.3018480028463,
+    "root_families_corr": 802.1171130447613,
+    "copies_per_family": 1.8143258937322222
+  },
+  "wall_s": 178.14455103874207,
+  "fit_settings": {
+    "init_mode": "brownian_extend",
+    "cycle_iters": 100,
+    "max_cycles": 5,
+    "seed": 2025,
+    "subcritical": true,
+    "optimizer": "native_bfgs",
+    "num_threads": 16,
+    "prior": "none",
+    "min_copies_override": 1,
+    "profile_filter": "max>=4"
+  }
+}

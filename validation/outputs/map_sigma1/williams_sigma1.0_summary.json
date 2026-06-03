@@ -1,0 +1,47 @@
+{
+  "label": "williams",
+  "F": 5378,
+  "N": 119,
+  "leaves": 60,
+  "min_copies": 4,
+  "prior": {
+    "kind": "independent",
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0,
+    "sigma": 1.0
+  },
+  "final": {
+    "ll": -117438.96020183727,
+    "L0": 0.8731551880868602,
+    "F": 5378,
+    "min_copies": 4,
+    "root_copies_obs": 1632.655275141986,
+    "root_copies_corr": 1647.460517466284,
+    "root_families_obs": 1259.747202166107,
+    "root_families_corr": 1274.5404389786154,
+    "copies_per_family": 1.2925917978612882
+  },
+  "log_prior_at_best": -488.3305475860392,
+  "neg_logp_at_best": 118024.16946282324,
+  "csuros_baseline": {
+    "ll": -117694.84071818793,
+    "L0": 0.8320121912743625,
+    "F": 5378,
+    "min_copies": 4,
+    "root_copies_obs": 1362.9165142313068,
+    "root_copies_corr": 1365.4217358518308,
+    "root_families_obs": 1091.5156400461292,
+    "root_families_corr": 1094.0205731840344,
+    "copies_per_family": 1.2480768363230237
+  },
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2025,
+    "subcritical": true,
+    "init_mode": "random",
+    "prior": "independent"
+  }
+}

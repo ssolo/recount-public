@@ -1,0 +1,38 @@
+{
+  "label": "ed194",
+  "F": 8855,
+  "N": 387,
+  "leaves": 194,
+  "min_copies": 4,
+  "prior": {
+    "sigma": 1.0,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -395540.12155736034,
+    "L0": 0.4415598859218089,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 1911.1969423282735,
+    "root_copies_corr": 1935.90694011419,
+    "root_families_obs": 1464.7572831849548,
+    "root_families_corr": 1489.3486358975945,
+    "copies_per_family": 1.299834634721014
+  },
+  "log_prior_at_best": -1345.516711575398,
+  "neg_logp_at_best": 396885.6382689357,
+  "csuros_baseline": {
+    "ll": -395601.1849513024,
+    "L0": 0.4297671901854408,
+    "F": 8855,
+    "min_copies": 4,
+    "root_copies_obs": 1672.3416457825929,
+    "root_copies_corr": 1692.3315696906423,
+    "root_families_obs": 1398.7307633161154,
+    "root_families_corr": 1418.6850012157706,
+    "copies_per_family": 1.192887475542749
+  },
+  "source_rate_file": "validation/subsets_map/ed194_map_rates.npz"
+}

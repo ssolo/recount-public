@@ -1,0 +1,38 @@
+{
+  "label": "dpann80",
+  "F": 3034,
+  "N": 159,
+  "leaves": 80,
+  "min_copies": 4,
+  "prior": {
+    "sigma": 1.0,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -94227.12027276562,
+    "L0": 0.6343240499864554,
+    "F": 3034,
+    "min_copies": 4,
+    "root_copies_obs": 1669.245356522525,
+    "root_copies_corr": 1712.5483013295323,
+    "root_families_obs": 1258.3667567541584,
+    "root_families_corr": 1301.4466786677824,
+    "copies_per_family": 1.3158804962202304
+  },
+  "log_prior_at_best": -558.4889800502802,
+  "neg_logp_at_best": 94785.6092528159,
+  "csuros_baseline": {
+    "ll": -94146.94487405664,
+    "L0": 0.36363399416909054,
+    "F": 3034,
+    "min_copies": 4,
+    "root_copies_obs": 1378.3070689834472,
+    "root_copies_corr": 1395.557250865879,
+    "root_families_obs": 1192.4762364514297,
+    "root_families_corr": 1209.6991070292927,
+    "copies_per_family": 1.1536399777073538
+  },
+  "source_rate_file": "validation/subsets_map/dpann80_map_rates.npz"
+}

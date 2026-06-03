@@ -1,0 +1,40 @@
+{
+  "label": "eury114",
+  "F": 7335,
+  "N": 227,
+  "leaves": 114,
+  "min_copies": 4,
+  "final": {
+    "ll": -274518.4285087678,
+    "L0": 0.4126800698325804,
+    "F": 7335,
+    "min_copies": 4,
+    "root_copies_obs": 1557.9734937361886,
+    "root_copies_corr": 1559.2430601079202,
+    "root_families_obs": 1247.4487107237599,
+    "root_families_corr": 1248.7179918068289,
+    "copies_per_family": 1.2486750974507688
+  },
+  "csuros_baseline": {
+    "ll": -274642.7130814076,
+    "L0": 0.41866145507022506,
+    "F": 7335,
+    "min_copies": 4,
+    "root_copies_obs": 1724.8884191281363,
+    "root_copies_corr": 1736.0901938421134,
+    "root_families_obs": 1441.3444692472538,
+    "root_families_corr": 1452.5354475243798,
+    "copies_per_family": 1.1952136498981891
+  },
+  "fit_settings": {
+    "num_starts": 3,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "polish_sigmas": [
+      0.05,
+      0.1
+    ],
+    "num_polish": 2,
+    "seed": 2031
+  }
+}

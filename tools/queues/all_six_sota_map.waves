@@ -1,0 +1,6 @@
+# Waves file for run_waves.sh — sequential batches of 4 fits each.
+# Each line is a wave; pairs separated by ',', "<dataset> <kind>".
+# Sized for SLOTS=4 × THREADS=4 on a 16-core Apple Silicon Mac.
+williams sota_ml, williams map_sigma1, dpann80 sota_ml, dpann80 map_sigma1
+proteo75 sota_ml, proteo75 map_sigma1, eury114 sota_ml, eury114 map_sigma1
+ed194 sota_ml, ed194 map_sigma1, arc269 sota_ml, arc269 map_sigma1

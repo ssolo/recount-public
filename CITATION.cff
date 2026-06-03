@@ -1,0 +1,53 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "recount: gain-loss-duplication ancestral-genome reconstruction with arbitrary observation threshold"
+type: software
+authors:
+  - family-names: "Szöllősi"
+    given-names: "Gergely J."
+    affiliation: "Okinawa Institute of Science and Technology Graduate University"
+    orcid: "https://orcid.org/0000-0002-8556-845X"
+  - family-names: "Williams"
+    given-names: "Tom A."
+    affiliation: "University of Bath"
+    orcid: "https://orcid.org/0000-0003-1072-0223"
+version: "0.1.4"
+date-released: "2026-05-30"
+url: "https://github.com/ssolo/recount-public"
+repository-code: "https://github.com/ssolo/recount-public"
+license: Apache-2.0
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.20388465
+    description: "Concept DOI (resolves to the latest version on Zenodo)"
+keywords:
+  - phylogenetics
+  - gene family evolution
+  - gain-loss-duplication
+  - ancestral genome reconstruction
+  - archaea
+  - LACA
+abstract: >-
+  recount is a C / Python implementation of the gain-loss-duplication
+  (GLD) likelihood framework of Csurös (PNAS 2026), with native arbitrary
+  observation-threshold (Ωmin) support, a tree-Brownian autocorrelated
+  log-rate prior (Thorne-Kishino-Painter), and a soft-landing fitting
+  pipeline (Phase-0 global γ, λ + per-branch lengths, then σ-annealed
+  Brownian-MAP phases) that escapes the cold-start degenerate basin on
+  large or noisy datasets. This software accompanies a PNAS Letter
+  (Szöllősi & Williams, 2026) that re-analyses the published archaeal
+  dataset across observation thresholds.
+references:
+  - type: article
+    authors:
+      - family-names: "Csűrös"
+        given-names: "Miklós"
+    title: "Count: evolutionary analysis of phylogenetic profiles with parsimony and likelihood"
+    journal: "Bioinformatics"
+    year: 2010
+    volume: 26
+    issue: 15
+    start: 1910
+    end: 1912
+    doi: "10.1093/bioinformatics/btq315"
+    notes: "Original Count software paper; recount re-implements the GLD likelihood and gradient algorithms developed in this and subsequent Csűrös papers."

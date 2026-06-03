@@ -1,0 +1,38 @@
+{
+  "label": "eury114",
+  "F": 7335,
+  "N": 227,
+  "leaves": 114,
+  "min_copies": 4,
+  "prior": {
+    "sigma": 1.0,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -274378.96686214855,
+    "L0": 0.4426081286956854,
+    "F": 7335,
+    "min_copies": 4,
+    "root_copies_obs": 1740.1479826020282,
+    "root_copies_corr": 1763.2356120178881,
+    "root_families_obs": 1405.0839628878184,
+    "root_families_corr": 1428.0970885861204,
+    "copies_per_family": 1.23467488738008
+  },
+  "log_prior_at_best": -870.4408767006456,
+  "neg_logp_at_best": 275249.4077388492,
+  "csuros_baseline": {
+    "ll": -274642.7130814076,
+    "L0": 0.41866145507022506,
+    "F": 7335,
+    "min_copies": 4,
+    "root_copies_obs": 1724.8884191281363,
+    "root_copies_corr": 1736.0901938421134,
+    "root_families_obs": 1441.3444692472533,
+    "root_families_corr": 1452.5354475243794,
+    "copies_per_family": 1.1952136498981893
+  },
+  "source_rate_file": "validation/subsets_map/eury114_map_rates.npz"
+}

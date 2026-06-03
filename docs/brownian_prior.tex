@@ -1,0 +1,644 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm, bm}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{enumitem}
+
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue}
+
+% -- Csurös-style notation (CM09 SI / Csurös 2021 arXiv) ------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Tree}{\mathcal{T}}
+\newcommand{\Leaves}{\mathcal{L}}
+\newcommand{\pa}{\mathrm{pa}}
+\newcommand{\ch}{\mathrm{ch}}
+\newcommand{\troot}{R}
+\newcommand{\Prof}{\boldsymbol{\xi}}   % per-family copy-number profile
+\newcommand{\rate}{\kappa}             % gain shape
+\newcommand{\dup}{\lambda}             % duplication rate
+\newcommand{\loss}{\mu}                % loss rate
+\newcommand{\edgelen}{t}               % edge length
+\newcommand{\survp}{\tilde p}          % survival probability (CM09 SI)
+\newcommand{\survq}{\tilde q}          % Pólya per-event parameter
+\newcommand{\Ll}{\mathcal{L}}          % log-likelihood
+\DeclareMathOperator{\Var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\DeclareMathOperator{\logit}{logit}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+
+\title{Autocorrelated rate priors on phylogenies:\\
+       a Thorne--Kishino--Painter relaxed clock for the\\
+       gain--loss--duplication birth--death model}
+\author{\texttt{recount} project\\
+        \textit{notation following CM09 SI and Cs\H{u}r\"os 2021 arXiv}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{\small\textbf{Provenance and disclaimer.}
+This document was drafted by Claude (Anthropic's LLM, model
+\texttt{claude-opus-4-7[1m]}) in collaboration with the human author,
+as part of an interactive Claude Code session
+(\url{https://claude.com/claude-code}). The Thorne--Kishino--Painter
+autocorrelated-rate prior is standard (Thorne, Kishino \& Painter,
+\emph{MBE} 15:1647--1657, 1998); the per-edge gradient was
+finite-difference validated to relative error $\le 10^{-6}$ against the
+analytical implementation in
+\texttt{native/src/recount\_brownian\_prior.c} and the Python reference
+in \texttt{validation/\_shared.py:\_brownian\_prior\_and\_grad\_python}.
+Treat as ``LLM-drafted, human-checked, FD-validated'' engineering
+documentation rather than peer-reviewed manuscript content.}}
+\end{center}
+
+\begin{abstract}
+We equip the \texttt{recount} maximum-a-posteriori fitter with a
+tree-structured prior that couples the rates of adjacent branches.
+The construction adapts the relaxed-clock prior of Thorne, Kishino
+\& Painter (\emph{MBE} 1998), placing a Brownian motion on the
+log-rate process as it walks down the phylogeny.  We give the
+explicit log-density (Eq.~\eqref{eq:logprior-final}) and gradient
+(Eq.~\eqref{eq:grad-edge}), prove the prior is proper
+(Theorem~\ref{thm:proper}) and that the resulting MAP objective is
+coercive (Theorem~\ref{thm:coercive}). The implementation is
+$\mathcal{O}(N)$ per evaluation and matches the analytical native C
+kernel to FD relative error~$\le10^{-6}$.
+\end{abstract}
+
+% =================================================================
+\section{Biological motivation}
+\label{sec:motivation}
+% =================================================================
+
+A gain--loss--duplication (GLD) phylogenetic fit estimates four
+quantities per branch of the species tree: a gain shape $\rate_v$
+controlling \emph{de novo} acquisition of new families, a duplication
+rate $\dup_v$, a loss rate $\loss_v$ (conventionally fixed at one to
+set the timescale), and a branch length $\edgelen_v$. On a tree with
+$N$ nodes that gives $\sim 3N$ free parameters. For the archaeal
+arc269 dataset ($N=537$) this is $\sim 1{,}600$ rate parameters.
+
+In every published reconstruction we are aware of these rates are
+treated as completely independent across branches. From an
+evolutionary-biology standpoint that is a strong, and usually
+unwarranted, assumption: the descendants of a recent common ancestor
+share an ecological niche, a mutational milieu, an effective population
+size, and (often) a metabolic strategy --- all of which influence the
+rate of gene gain, loss, and duplication. A sudden, large jump in
+inferred gain rate from one branch to its child is biologically
+implausible most of the time, but the independent prior treats it as
+just as likely as no jump.
+
+What is required is a prior that says \emph{``adjacent branches should
+have similar rates, with gradually growing divergence over evolutionary
+time.''} This is exactly the structure introduced by Thorne, Kishino
+\& Painter (1998, henceforth \textbf{TKP}) for molecular substitution
+rates: the log-rate is allowed to wander Brownian-style as one walks
+from the root down the tree, with variance growing with branch length.
+TKP's prior was an early example of what is now called a
+\emph{relaxed clock}: it relaxes the strict-clock assumption (all
+branches share one rate) without collapsing to the unstructured
+independent-rate limit.
+
+\paragraph{What this document does.} We adapt TKP to GLD rates.
+Each axis (gain, duplication, length) gets its own independent
+Brownian process on the log-rate as it walks from the root through
+the tree. We work in the coordinates used by the optimiser
+(\S\ref{sec:setup}), give the explicit log-prior density
+(\S\ref{sec:density}) and gradient (\S\ref{sec:gradient}), prove that
+the resulting joint prior on rates is a full-rank Gaussian Markov
+random field, hence proper (\S\ref{sec:propriety}), and prove that
+when combined with the GLD likelihood the MAP objective is coercive
+(\S\ref{sec:coercivity}). This last point is the key practical payoff:
+it rules out the rate-boundary asymptote analysed in the companion
+note \texttt{boundary\_identifiability.tex}.
+
+% =================================================================
+\section{Setup and notation}
+\label{sec:setup}
+% =================================================================
+
+We follow the notation of Cs\H{u}r\"os 2021 (arXiv:2107.11440), with
+the survival-parameter convention of the CM09 supplement.
+
+\paragraph{Tree.}
+Let $\Tree = (V, E, \troot)$ be a rooted tree with node set $V$ of
+cardinality $N$, root $\troot \in V$, leaf set $\Leaves \subset V$,
+and edges directed from $\troot$ outward.  For non-root $v$ we write
+$\pa(v) \in V$ for its parent. Each edge $\pa(v)\to v$ is identified
+with its child endpoint $v$.
+
+\paragraph{Per-edge rates.}
+On the incoming edge of each non-root node $v$ we attach four
+parameters:
+\begin{equation}
+\rate_v \;\ge\; 0,\qquad
+\dup_v \;\ge\; 0,\qquad
+\loss_v \;>\; 0,\qquad
+\edgelen_v \;\in\; (0, \infty).
+\label{eq:rates}
+\end{equation}
+$\rate_v$ is the immigration (Pólya shape) parameter for new gene
+families landing on the edge, $\dup_v$ the per-lineage duplication
+rate, $\loss_v$ the per-lineage loss rate, and $\edgelen_v$ the time
+elapsed on the edge. Following CM09 we set $\loss_v \equiv 1$ (it
+absorbs the timescale), so the free per-edge parameters are
+$(\rate_v, \dup_v, \edgelen_v)$. The root $\troot$ carries a gain
+parameter $\rate_\troot$ but no edge length.
+
+\paragraph{The optimiser's coordinates.}
+Because rates are positive, the optimiser works on log-coordinates;
+for duplication we additionally apply the sub-critical Yule logit
+when activated. With $N$ nodes (including root) define the packed
+vector
+\begin{equation}
+x \;=\; \bigl(\underbrace{\log\rate_v}_{v\in V},\;
+            \underbrace{\theta_{\dup,v}}_{v\neq\troot},\;
+            \underbrace{\log\edgelen_v}_{v\neq\troot}\bigr)
+\;\in\; \R^{3N-2},
+\label{eq:packing}
+\end{equation}
+where
+\begin{equation}
+\theta_{\dup,v} \;=\;
+\begin{cases}
+\logit\bigl(\dup_v \,/\, \mathrm{Q}\bigr) & \text{(sub-critical Yule, $\mathrm{Q}=1-2^{-30}$)}\\
+\log\dup_v & \text{(unconstrained mode)}
+\end{cases}
+\label{eq:theta-dup}
+\end{equation}
+matches the Cs\H{u}r\"os Java convention
+(\texttt{is\_duprate\_bounded=true}). The gain axis includes the root;
+the duplication and length axes have $N-1$ entries each (no root). To
+unify the three axes for the prior, write $x^{(a)}_v$ for the entry
+of $x$ at node $v$ on axis $a\in\{\rate, \dup, \edgelen\}$, with the
+convention that $x^{(\dup)}_\troot$ and $x^{(\edgelen)}_\troot$ are
+identified with fixed reference centres (see \S\ref{sec:density}
+below).
+
+\paragraph{Data.}
+A gene-family profile is a vector
+$\Prof \in \Z_{\ge 0}^\Leaves$ of integer copy counts at each leaf.
+The data is $\{\Prof_f\}_{f=1}^F$. The log-likelihood
+$\Ll(x) := \sum_f \log P(\Prof_f \mid x)$ is computed by the
+inside--outside recursion of CM09; this document does not modify it.
+
+% =================================================================
+\section{The prior: classical TKP and our v1 simplification}
+\label{sec:prior}
+% =================================================================
+
+\subsection{Classical TKP on log-rates}
+
+In its original form, TKP places a Gaussian on the log-rate
+\emph{increment} between parent and child, with variance proportional
+to elapsed evolutionary time:
+\begin{equation}
+\log r_v - \log r_{\pa(v)}
+\;\sim\;
+\mathcal{N}\!\bigl(0,\, \sigma_{\mathrm{TKP}}^2 \cdot \edgelen_v\bigr).
+\label{eq:tkp-classic}
+\end{equation}
+This says: the log-rate process is a Brownian motion run along the
+tree, with diffusion coefficient $\sigma_{\mathrm{TKP}}^2$. Two
+sister branches with short edges between them and a recent common
+ancestor will have similar rates; two distant branches separated by
+long edges will be free to diverge.
+
+\subsection{Our v1: time-uniform Brownian}
+
+We adopt the structure of \eqref{eq:tkp-classic} with one
+simplification: drop the per-edge $\edgelen_v$ weighting, so that
+every edge incurs the same variance $\sigma_a^2$ on each rate axis
+$a$. Formally,
+\begin{equation}
+\Delta_a(v)
+\;:=\;
+x^{(a)}_v - x^{(a)}_{\pa(v)}
+\;\overset{\text{iid}}{\sim}\;
+\mathcal{N}\!\bigl(0,\, \sigma_a^2\bigr)
+\qquad
+\text{for every } v\neq \troot,\quad a\in\{\rate,\dup,\edgelen\}.
+\label{eq:tkp-v1}
+\end{equation}
+This is mathematically a Gaussian process on the tree with covariance
+function $\Cov(x_u, x_v) = \sigma_a^2 \cdot d(u,v)$ where $d(u,v)$ is
+the \emph{topological} (edge-count) distance to the most recent
+common ancestor, rather than the metric distance. Biologically it
+treats every branch as the same ``unit of evolutionary opportunity''
+to revise the rate, irrespective of its $\edgelen_v$.
+
+\begin{remark}[Why drop the $\edgelen_v$ weight?]\label{rem:why-tu}
+The classical TKP weight $\edgelen_v$ couples the prior to the very
+quantity ($\edgelen_v$ itself) that the optimiser is solving for,
+introducing a non-trivial extra chain-rule term whenever
+$\edgelen_v$ moves.  The time-uniform variant produces an
+$\mathcal{O}(N)$ kernel with no $\edgelen$-coupling, and empirically
+captures the same first-order effect (shrinkage between adjacent
+branches). The classical form is left for a v2 implementation; see
+\S\ref{sec:future}.
+\end{remark}
+
+\subsection{Anchoring the prior at the root}
+
+A Brownian motion has no global scale: shifting every $x^{(a)}_v$ by
+a common constant leaves all the increments unchanged.  To pin the
+absolute scale we add a wide independent Gaussian \emph{root anchor}
+\begin{equation}
+\log\rate_\troot \;\sim\; \mathcal{N}(\loss^{(\rate)}_\troot,\,
+\sigma_\troot^2),
+\label{eq:root-anchor-gain}
+\end{equation}
+where by convention we use $\loss^{(a)}_\troot$ for the prior centre
+on axis $a$.  On the duplication and length axes the root does not
+have an optimisable rate (the root has no incoming edge), so the
+root values are fixed at the prior centres
+$\loss^{(\dup)}_\troot, \loss^{(\edgelen)}_\troot$ and
+``$\Delta_a(v)$ for $\pa(v)=\troot$'' is interpreted with these
+fixed values plugged in.
+
+% =================================================================
+\section{Log-density}
+\label{sec:density}
+% =================================================================
+
+Combining \eqref{eq:tkp-v1} and \eqref{eq:root-anchor-gain}, the
+joint log-prior is
+\begin{equation}
+\boxed{\;
+\log p_{\mathrm{B}}(x)
+\;=\;
+- \tfrac{1}{2}\sum_{a\in\{\rate,\dup,\edgelen\}}\;
+   \sum_{v\neq\troot}
+      \frac{\Delta_a(v)^2}{\sigma_a^2}
+\;-\;
+\tfrac{1}{2}\frac{\bigl(\log\rate_\troot - \loss^{(\rate)}_\troot\bigr)^2}
+                 {\sigma_\troot^2}
+\;+\; \mathrm{const}.
+\;}
+\label{eq:logprior-final}
+\end{equation}
+The constant absorbs the normalising factors of the Gaussians; under
+the v1 time-uniform variance they do not depend on $x$.
+
+\paragraph{Worth pausing on.}
+Equation~\eqref{eq:logprior-final} is just a sum of squared
+log-rate increments along the tree --- one per edge, per axis, plus
+one root-anchor term on the gain axis. There are no off-tree
+interactions, no quadratic couplings between non-adjacent branches.
+This is what makes the gradient and the inference $\mathcal{O}(N)$.
+
+% =================================================================
+\section{Gradient}
+\label{sec:gradient}
+% =================================================================
+
+The gradient is obtained by direct differentiation of
+\eqref{eq:logprior-final}. Each edge contribution
+$-\Delta_a(v)^2/(2\sigma_a^2)$ depends on the child entry $x^{(a)}_v$
+and on the parent entry $x^{(a)}_{\pa(v)}$ (the latter only when
+$\pa(v)$ is itself not the root, or on the gain axis where the root
+is in $x$). The closed form is
+\begin{align}
+\frac{\partial \log p_{\mathrm{B}}}{\partial x^{(a)}_v}
+&= -\frac{\Delta_a(v)}{\sigma_a^2}
+&&\text{(contribution from } v \text{ as a child)},
+\label{eq:grad-edge}\\
+\frac{\partial \log p_{\mathrm{B}}}{\partial x^{(a)}_{\pa(v)}}
+&\mathrel{+}= +\frac{\Delta_a(v)}{\sigma_a^2}
+&&\text{(contribution from } \pa(v) \text{ as a parent of } v\text{)},
+\label{eq:grad-parent}\\
+\frac{\partial \log p_{\mathrm{B}}}{\partial \log\rate_\troot}
+&\mathrel{+}= -\frac{\log\rate_\troot - \loss^{(\rate)}_\troot}{\sigma_\troot^2}
+&&\text{(root anchor)}.
+\label{eq:grad-root}
+\end{align}
+The ``$\mathrel{+}=$'' notation captures the scatter-add semantics:
+the parent of any internal node $u$ accumulates contributions from
+all of $u$'s children $v\in\ch(u)$. The implementation is a single
+pass over the $N-1$ tree edges with $\mathcal{O}(1)$ work per edge
+per axis.
+
+\begin{proposition}[Computational complexity]\label{prop:complexity}
+The log-prior \eqref{eq:logprior-final} and its full gradient
+\eqref{eq:grad-edge}--\eqref{eq:grad-root} cost
+$\mathcal{O}(N)$ floating-point operations.
+\end{proposition}
+\begin{proof}
+One pass over the $N-1$ tree edges with three scalar additions per
+edge per axis, plus a single root-anchor term. $\square$
+\end{proof}
+
+% =================================================================
+\section{Theoretical properties}
+% =================================================================
+
+\subsection{Propriety: the prior is a full-rank GMRF}
+\label{sec:propriety}
+
+We show that the joint prior on the packed vector $x$ defined by
+\eqref{eq:logprior-final} is a non-degenerate (full-rank) Gaussian
+distribution. Equivalently, it integrates to a finite constant, so
+it is a \emph{proper} prior in the Bayesian sense.
+
+\begin{theorem}[Propriety]\label{thm:proper}
+Fix $\sigma_a > 0$ for $a \in \{\rate, \dup, \edgelen\}$ and
+$\sigma_\troot > 0$. Under the conventions of
+\S\ref{sec:setup}--\S\ref{sec:density}, the prior density
+\eqref{eq:logprior-final} arises from a Gaussian distribution on
+$x \in \R^{3N-2}$ with positive-definite precision matrix
+\begin{equation}
+\Sigma^{-1} \;=\; \mathrm{blkdiag}\bigl(\Lambda_\rate,\;
+                                       \Lambda_\dup,\;
+                                       \Lambda_\edgelen\bigr),
+\label{eq:precision-block}
+\end{equation}
+where on the gain axis $\Lambda_\rate = (1/\sigma_\rate^2)\,L_\Tree
++ (1/\sigma_\troot^2)\,e_\troot e_\troot^\top$ with $L_\Tree$ the
+unsigned graph Laplacian of $\Tree$, and on the duplication and
+length axes $\Lambda_a = (1/\sigma_a^2)\,L^\partial_\Tree$ is the
+\emph{Dirichlet} (root-clamped) tree Laplacian. In particular each
+block is positive-definite and the joint prior integrates to a
+finite constant.
+\end{theorem}
+\begin{proof}
+We argue axis by axis. Fix an axis $a$. The terms in
+\eqref{eq:logprior-final} that depend on the $a$-axis entries of $x$
+form a quadratic form
+\(
+Q_a(x) = (1/2\sigma_a^2)\sum_{v\neq\troot}\Delta_a(v)^2
+       (+\, (1/2\sigma_\troot^2)(x^{(a)}_\troot - \loss^{(a)}_\troot)^2
+       \text{ on the gain axis})\).
+We must show $Q_a$ is positive-definite.
+
+\textbf{Gain axis ($a=\rate$).} For every edge $\pa(v)\to v$, the
+term $\Delta_\rate(v)^2 = (x^{(\rate)}_v - x^{(\rate)}_{\pa(v)})^2$
+contributes $+1/\sigma_\rate^2$ to the $(v,v)$ and
+$(\pa(v),\pa(v))$ diagonals and $-1/\sigma_\rate^2$ to the
+off-diagonals $(v,\pa(v))$ and $(\pa(v), v)$.  Summing over edges
+gives exactly the unsigned graph Laplacian
+$L_\Tree = D - A$ scaled by $1/\sigma_\rate^2$, where $D$ is the
+degree matrix and $A$ the adjacency matrix.  This $L_\Tree$ has
+nullspace spanned by the all-ones vector $\mathbf{1}$ (Brownian
+motion has a free additive constant).  The root anchor
+$(1/\sigma_\troot^2)(x^{(\rate)}_\troot - \loss^{(\rate)}_\troot)^2$
+contributes $+1/\sigma_\troot^2$ to the $(\troot,\troot)$ diagonal,
+which removes that nullspace direction: any non-zero
+$y \in \R^N$ either has $y \not\perp \mathbf{1}$ (in which case
+$L_\Tree$ already gives strictly positive contribution) or
+$y = c\mathbf{1}$ with $c\neq 0$ (in which case the root-anchor term
+gives $c^2/\sigma_\troot^2 > 0$). Hence $\Lambda_\rate \succ 0$.
+
+\textbf{Duplication and length axes ($a\in\{\dup, \edgelen\}$).}
+On these axes the root entry is not in $x$ but is held fixed at the
+prior centre $\loss^{(a)}_\troot$. The edge-increment terms involving
+the root,
+$(x^{(a)}_{v} - \loss^{(a)}_\troot)^2$ for $v \in \ch(\troot)$, then
+contribute $+1/\sigma_a^2$ to the $(v,v)$ diagonal but no
+off-diagonal. This is the standard Dirichlet condition: the
+``root-clamped'' tree Laplacian $L^\partial_\Tree$ obtained from
+$L_\Tree$ by deleting the root row/column has full rank (a connected
+graph minus one boundary node has full-rank Laplacian).  Hence
+$\Lambda_a \succ 0$.
+
+The three axes do not interact in \eqref{eq:logprior-final}, so the
+full precision is block-diagonal and positive-definite. The joint
+density is a non-degenerate Gaussian and integrates to
+$(2\pi)^{(3N-2)/2}\det(\Sigma)^{1/2}$, finite. $\square$
+\end{proof}
+
+\begin{remark}[Why the root anchor on $\rate$ is necessary]\label{rem:anchor}
+Without the root anchor, $\Lambda_\rate$ is the bare tree Laplacian
+$L_\Tree$, which is rank-deficient: it admits a one-dimensional
+nullspace corresponding to a common additive shift of all
+$\log\rate_v$. Biologically that is the ``slide the entire gain rate
+up and down'' direction --- the data \emph{can} pin it (a high gain
+rate predicts many copies; a low gain rate predicts few), but the
+\emph{prior} cannot, and an improper prior on a direction the data
+also struggles to constrain would propagate to a non-identifiable
+posterior. The wide anchor $\sigma_\troot = 5$ contributes very
+little except in the marginal axis the data cannot fix; it is the
+minimum surgery to make the prior proper.
+\end{remark}
+
+\subsection{Coercivity of the MAP objective}
+\label{sec:coercivity}
+
+The point of using the prior at all is that the GLD likelihood
+$\Ll(x)$ is not bounded above on $\R^{3N-2}$: at certain boundary
+configurations the supremum is finite but unattained on $\R^{3N-2}$
+(see the companion note \texttt{boundary\_identifiability.tex} for
+the Pólya--Poisson asymptote analysis). The Brownian prior penalises
+those configurations, and combined with the likelihood gives a
+coercive objective.
+
+\begin{theorem}[Coercivity of the Brownian-MAP objective]
+\label{thm:coercive}
+For any finite $\sigma_a, \sigma_\troot > 0$, the objective
+\begin{equation}
+\Ll^{\mathrm{MAP, B}}(x)
+\;:=\;
+\Ll(x) \;-\; F\log\bigl(1 - L(0;x)\bigr) \;+\; \log p_{\mathrm{B}}(x)
+\label{eq:map-obj}
+\end{equation}
+is coercive on $\R^{3N-2}$: $\Ll^{\mathrm{MAP, B}}(x_n) \to -\infty$
+whenever $\|x_n\| \to \infty$. Its supremum is therefore attained at
+an interior point.
+\end{theorem}
+\begin{proof}
+The likelihood term $\Ll(x) = \sum_f \log L_f(x)$ is non-positive
+($L_f \in (0,1]$ for every family). The conditional-observability
+correction $-F\log(1-L(0;x))$ is positive but bounded above by
+$F\log\bigl(\liminf_{x\in\R^{3N-2}}(1 - L(0;x))\bigr)^{-1}$, which is
+finite as long as the family-size process is non-degenerate (it is,
+on any tree). Hence the first two terms are bounded above.
+
+The third term $\log p_{\mathrm{B}}(x)$ is a quadratic form
+$-\tfrac{1}{2}(x-\mu)^\top \Sigma^{-1}(x-\mu) + \mathrm{const}$, where
+$\Sigma^{-1}$ is positive-definite by Theorem~\ref{thm:proper} and
+$\mu$ is the prior mean. Hence
+$\log p_{\mathrm{B}}(x) \le -\tfrac{1}{2}\lambda_{\min}(\Sigma^{-1})
+\|x - \mu\|^2 + \mathrm{const}$,
+where $\lambda_{\min}(\Sigma^{-1}) > 0$.  As $\|x\|\to\infty$ this
+tends to $-\infty$ at quadratic rate, dominating any finite bounded
+likelihood term, so $\Ll^{\mathrm{MAP, B}}(x) \to -\infty$.
+
+Coercivity together with continuity of $\Ll^{\mathrm{MAP,B}}$
+(continuity of $\Ll$ is standard from the smoothness of the survival
+map of CM09; the prior is a smooth quadratic; $L(0;\cdot)$ is smooth
+by the Pn-tensor recursion of Cs\H{u}r\"os 2026 SI) implies that
+every super-level set $\{x : \Ll^{\mathrm{MAP, B}}(x) \ge c\}$ is
+non-empty for some $c$ and bounded by coercivity, hence compact, on
+which a continuous function attains its supremum. $\square$
+\end{proof}
+
+% =================================================================
+\section{Default hyperparameters and biological calibration}
+% =================================================================
+
+\begin{table}[h]
+\centering
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lll}
+\toprule
+parameter & default & biological meaning \\
+\midrule
+$\sigma_\rate$ & $1.0$ & one $e$-fold per edge in gain shape \\
+$\sigma_\dup$ & $1.0$ & one logit-unit per edge in duplication \\
+$\sigma_\edgelen$ & $1.0$ & one $e$-fold per edge in branch length \\
+$\sigma_\troot$ & $5.0$ & deliberately wide; identifiability only \\
+$\loss^{(\rate)}_\troot$ & $\log 0.1$ & matches \texttt{--mu-gain} \\
+$\loss^{(\dup)}_\troot$ & $\logit(0.5) = 0$ & matches \texttt{--mu-dup} \\
+$\loss^{(\edgelen)}_\troot$ & $\log 1 = 0$ & matches \texttt{--mu-length} \\
+\bottomrule
+\end{tabular}
+\caption{Default hyperparameters. ``One $e$-fold per edge'' means
+the 68\,\% Brownian-walk prior interval after one edge step on a
+given axis is roughly $\pm 1$ on the log-scale, i.e.\ multiplicative
+factors in $[e^{-1}, e^{1}] \approx [0.37, 2.72]$. Across a
+20-edge-deep tree, the cumulative prior credible interval on
+log-rate is then roughly $\pm \sqrt{20} \approx \pm 4.5$, i.e.\
+$\sim 90\times$ either direction --- wide enough not to override
+data, tight enough to forbid pathological boundary excursions of
+$\sim 10^{10}\times$.}
+\end{table}
+
+\paragraph{What ``$\sigma_a = 1$'' is asking biologically.}
+With $\sigma_a = 1$, two sister branches off a recent common
+ancestor are expected to have log-rates within $\pm 2$ ($\sim$95\,\%
+prior CI under a one-step Brownian) --- i.e.\ their rates within a
+factor of $\sim 7$. That matches the kind of within-clade rate
+heterogeneity reported in molecular-clock studies (where the
+relaxed-clock literature finds factors of 3--10 across closely
+related taxa). Tightening to $\sigma_a = 0.5$ enforces visibly more
+smoothing; loosening to $\sigma_a \gg 1$ recovers the
+independent-prior limit.
+
+\paragraph{CLI coordinate convention.}
+The CLI flag \texttt{--mu-dup} in \texttt{validation/map.py} is
+specified by the user in \emph{log-rate units} (default
+$\log 0.5 \approx -0.693$, i.e.\ ``prior centre at $\dup = 0.5$''),
+not in the optimiser's logit-coord units. When the sub-critical
+constraint is active the optimiser acts on
+$\theta_{\dup,v} = \logit(\dup_v / \mathrm{Q})$, so the prior centre
+$\loss^{(\dup)}_\troot$ appearing in \eqref{eq:logprior-final} must
+also be in logit-coords. The translation happens once at the
+boundary of \texttt{fit\_dataset} via \texttt{\_mu\_dup\_for\_optimizer};
+each summary JSON records both the user-passed log-rate value and
+the translated logit-coord value (\texttt{mu\_dup\_in\_optimizer\_coord}).
+
+% =================================================================
+\section{Implementation}
+% =================================================================
+
+\begin{itemize}
+\item \textbf{Native C:} \texttt{native/src/recount\_brownian\_prior.c}.
+  Public symbol \texttt{recount\_brownian\_prior\_and\_grad}, single
+  $\mathcal{O}(N)$ loop over edges, no allocation, no threading
+  (work is too small to benefit from \texttt{dispatch\_apply}).
+\item \textbf{ctypes wrapper:}
+  \texttt{recount.native\_backend.brownian\_prior\_native}, accepting
+  the parent array, root index, packed $x$, the four sigmas, and the
+  three prior centres; returning $(\log p_{\mathrm{B}}, \nabla\log p_{\mathrm{B}})$.
+\item \textbf{Python reference:}
+  \texttt{validation.\_shared.\_brownian\_prior\_and\_grad\_python}
+  uses \texttt{numpy.add.at} for the scatter-add and is kept for
+  finite-difference cross-checking in
+  \texttt{tests/test\_brownian\_prior.py}.
+\item \textbf{Integration with the existing MAP factory:}
+  \texttt{make\_objgrad\_map\_brownian} in
+  \texttt{validation/\_shared.py} subtracts $\partial\log p_{\mathrm{B}}/\partial x$
+  from the negative-LL gradient produced by
+  \texttt{\_gradient\_raw\_native}; the LL chain rule is unchanged.
+\item \textbf{Validation:} analytical gradient matches central
+  finite differences to relative error $\le 10^{-6}$ on 30 random
+  optimiser positions on \texttt{dpann80} ($N=159$); the
+  full-objective gradient through
+  \texttt{make\_objgrad\_map\_brownian} matches FD to the same
+  tolerance. See \texttt{tests/test\_brownian\_prior.py} for the
+  four-test suite.
+\end{itemize}
+
+% =================================================================
+\section{Out of scope for v1, deferred to v2}
+\label{sec:future}
+% =================================================================
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{TKP-classic per-edge $\edgelen_v$ weighting}
+  (\eqref{eq:tkp-classic}, the proper diffusion form). Requires extra
+  chain-rule terms since $\edgelen_v$ is itself in the optimiser.
+  \emph{Consequence of the v1 simplification}: very long branches are
+  penalised as tightly as very short ones for a 1-unit log-rate
+  change. On real phylogenies with heterogeneous branch lengths, the
+  v1 prior systematically over-smooths short branches and
+  under-smooths long branches relative to the proper TKP form.
+\item \textbf{Empirical Bayes / REML estimation of the $\sigma_a$.}
+  V1 fixes the three sigmas from the CLI; an outer EM or REML loop
+  is a v2 enhancement.
+\item \textbf{Composition with the $K$-category LogisticShift mixture}
+  (\texttt{logistic\_shift\_gradient.tex}). The current mixture fit
+  applies an independent Gaussian prior on the base rates; replacing
+  it with the Brownian prior would compose family-level heterogeneity
+  with branch-level smoothing.
+\item \textbf{Per-branch discrete rate-class HMM.} A separate model
+  class with its own forward--backward, beyond the scope of the
+  Brownian-prior framework.
+\end{enumerate}
+
+% =================================================================
+\section{Related work}
+% =================================================================
+
+\begin{itemize}
+\item \textbf{Thorne, Kishino \& Painter} (1998),
+  \emph{Estimating the rate of evolution of the rate of molecular
+  evolution}, MBE 15:1647--1657. The original autocorrelated-rate
+  prior; we adapt the structure unchanged.
+\item \textbf{Drummond, Ho, Phillips \& Rambaut} (2006),
+  \emph{Relaxed phylogenetics and dating with confidence}, PLoS
+  Biology 4:e88. The uncorrelated-lognormal alternative
+  ($\log r_v$ iid from a global distribution, ignoring tree
+  structure). The recount independent prior is closer to this
+  unstructured form; the Brownian prior described here is its TKP
+  autocorrelated counterpart.
+\item \textbf{Cs\H{u}r\"os \& Mikl\'os} (2009), \emph{Streamlining and
+  large ancestral genomes in Archaea inferred with a phylogenetic
+  birth-and-death model}, MBE 26:2087--2095. The GLD model whose
+  per-node rates we are placing a prior on. Cs\H{u}r\"os' Java
+  reference (\texttt{count.model.MLDistribution}) does
+  plain maximum-likelihood optimisation of the rates: no Bayesian
+  prior on the per-node $(\rate_v,\dup_v,\edgelen_v)$. The only
+  ``prior'' in Cs\H{u}r\"os' code is the \emph{root prior} on the
+  copy count at the root, which is part of the model itself, not a
+  regulariser on the rate parameters; and the ``MAP'' language in
+  Cs\H{u}r\"os 2026 PNAS refers to maximum-a-posteriori
+  family-presence inference (a per-family binary classifier on the
+  inferred copy counts at each internal node), not MAP rate
+  estimation. The independent per-node log-Normal prior in
+  \texttt{validation/map.py} as the \texttt{--prior independent}
+  mode, and the Brownian prior described here as
+  \texttt{--prior brownian}, are both additions by the present
+  codebase.
+\item \textbf{Cs\H{u}r\"os} (2021), arXiv:2107.11440. Analytical
+  gradient of the GLD likelihood via the conserved-copy
+  decomposition. Provides the per-rate gradients used in our
+  $\Ll(x)$ pipeline.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,753 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{booktabs}
+
+% -- Csurös-style notation (CM09 SI / Csurös 2021 arXiv) ------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\PROB}{\mathbb{P}}
+\newcommand{\Tree}{\mathcal{T}}
+\newcommand{\Leaves}{\mathcal{L}}
+\newcommand{\pa}{\mathrm{pa}}
+\newcommand{\ch}{\mathrm{ch}}
+\newcommand{\troot}{R}
+\newcommand{\Prof}{\boldsymbol{\xi}}
+\newcommand{\rate}{\kappa}             % gain shape
+\newcommand{\dup}{\lambda}             % duplication rate
+\newcommand{\loss}{\mu}                % loss rate (=1 by convention)
+\newcommand{\edgelen}{t}               % edge length
+\newcommand{\survp}{\tilde p}          % survival probability
+\newcommand{\survq}{\tilde q}          % Pólya per-event parameter
+\newcommand{\Ll}{\mathcal{L}}
+\newcommand{\PGF}{\mathsf{G}}
+\DeclareMathOperator{\Pol}{Polya}
+\DeclareMathOperator{\Poi}{Pois}
+\DeclareMathOperator{\NB}{NegBin}
+\DeclareMathOperator{\Surv}{Surv}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Boundary identifiability of the gain--loss--duplication likelihood:\\
+       the Pólya--Poisson asymptote and what it means for\\
+       ancestral genome inference}
+\author{\texttt{recount} project\\
+        \textit{notation following CM09 SI and Cs\H{u}r\"os 2021 arXiv}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{\small\textbf{Provenance and disclaimer.}
+This document was drafted by Claude (Anthropic's LLM, model
+\texttt{claude-opus-4-7[1m]}) in collaboration with the human author,
+as part of an interactive Claude Code session
+(\url{https://claude.com/claude-code}). The mathematical derivations
+follow standard arguments from Numerical Recipes 10.7, L\'evy
+continuity for probability generating functions, and the survival
+map of the CM09 supplement. They have been spot-checked numerically
+against the analytical native C implementation but not externally
+peer-reviewed. The arc269 numerical findings are reproducible from
+\texttt{validation/} scripts (see
+\texttt{validation/outputs/README.md}) but reflect the optimiser
+trajectories of a particular software stack (\texttt{native\_bfgs}
+at the time of writing) and may shift with optimiser choice or
+precision. Treat as ``LLM-drafted, human-checked, FD-validated and
+bit-perfectly reproduced against Cs\H{u}r\"os' Java on the focal
+subsets'' rather than peer-reviewed manuscript content.}}
+\end{center}
+
+\begin{abstract}
+We give a rigorous account of a boundary pathology in the
+gain--loss--duplication (GLD) phylogenetic likelihood: there exist
+sequences of interior parameters along which the log-likelihood
+$\Ll(\Theta)$ increases without ever attaining its supremum at any
+interior point. The mechanism is the Pólya--Poisson PGF convergence
+$\Pol(\rate,\survq) \rightharpoonup \Poi(\rate\survq/(1-\survq))$
+(Lemma~\ref{lem:pgf}), which one of the per-edge offspring kernels
+can be driven to approach as $\dup_{v_\star}\to\infty$ at one
+internal node $v_\star$. We characterise one sufficient
+parameter-space path realising the limit
+(Lemma~\ref{lem:pgf}, Remark~\ref{rem:suffroute}), establish
+non-attainment along it (Theorem~\ref{thm:unbounded}), prove a
+quantitative gap result that any finite log-rate budget leaves an
+$\epsilon$-suboptimal interior MLE
+(Proposition~\ref{prop:gap-quant}), and prove that a weakly
+informative log-Normal prior on the rates renders the MAP objective
+coercive with global maximum in the interior
+(Theorem~\ref{thm:map-coercive}). The arc269 archaeal dataset
+exhibits this asymptote in practice
+(\S\ref{sec:numerical}); on a single internal node the optimiser
+finds $\dup_{v_\star} \approx 5.6\times10^9$ giving an LL
+improvement of $\sim 20{,}000$ nat over any in-basin interior point.
+\end{abstract}
+
+% =================================================================
+\section{Biological motivation: what the asymptote means}
+\label{sec:bio-motivation}
+% =================================================================
+
+In ancestral genome reconstruction, every internal node $v$ of the
+species tree carries a hypothesis about how families arose,
+duplicated, and were lost along the edge that leads to it. A pure
+Pólya/negative-binomial offspring distribution gives \emph{lineage-by-lineage}
+heritable expansion: copies that survive can themselves duplicate, and
+the variance grows in step with the mean. A pure Poisson offspring
+distribution gives instead a \emph{lineage-independent immigration}
+process at the node: families just \emph{appear}, with no link to
+what was already there. These are biologically different stories.
+
+In the GLD parameterisation the Pólya--Poisson limit is the
+``$\dup \to \infty$'' boundary: very fast duplication at one node,
+combined with a very short observable survival fraction, makes the
+per-edge kernel look like an immigration burst.  In other words, when
+the optimiser pushes $\dup_{v_\star}$ to infinity at some node
+$v_\star$, the model is saying ``\emph{at $v_\star$ many families
+spontaneously materialised, in a way that is statistically
+indistinguishable from a Poisson immigration source}.''
+
+For most biological datasets this is a much better fit than the
+finite-$\dup$ Pólya alternative --- the over-dispersion of
+finite-$\dup$ Pólya is hard to make compatible with empirical
+copy-number variance, but an unconstrained immigration ``vent'' at
+one node can absorb whatever excess copies are needed.  Hence the
+optimiser climbs the boundary and the inferred ancestral genome
+size is then determined by whatever finite log-rate the optimiser
+happens to stall at, \emph{not} by any biological information.
+
+\paragraph{What this document does.}
+\S\ref{sec:notation} sets up notation. \S\ref{sec:pgf} proves the
+Pólya--Poisson PGF limit (Lemma~\ref{lem:pgf}) and identifies
+a sufficient parameter-space path realising it
+(Remark~\ref{rem:suffroute}).  \S\ref{sec:nonattain} establishes
+non-attainment along that path (Theorem~\ref{thm:unbounded}) and a
+quantitative gap result (Proposition~\ref{prop:gap-quant}).
+\S\ref{sec:map} proves coercivity of the MAP objective under the
+log-Normal prior (Theorem~\ref{thm:map-coercive}).
+\S\ref{sec:numerical} documents the asymptote on arc269.
+\S\ref{sec:biology} discusses biological implications and
+method-selection recommendations.
+
+% =================================================================
+\section{Setup and notation}
+\label{sec:notation}
+% =================================================================
+
+We follow Cs\H{u}r\"os \& Mikl\'os 2009 SI (henceforth \textbf{CM09})
+and Cs\H{u}r\"os 2021 arXiv:2107.11440 (henceforth \textbf{Cs21}); the
+reader is assumed familiar with the GLD setup, this section fixes
+notation only.
+
+\paragraph{Tree, profiles, rates.}
+Let $\Tree = (V, E, \troot)$ be a rooted tree with $N=|V|$ nodes,
+edges directed from the root $\troot$ to the leaves
+$\Leaves \subset V$. For $v \neq \troot$ write $\pa(v)\in V$ for the
+parent, $\ch(v) \subset V$ for the children. On the incoming edge of
+each non-root node we attach rates
+\begin{equation}
+\rate_v \;\ge\; 0, \qquad
+\loss_v > 0, \qquad
+\dup_v \;\ge\; 0, \qquad
+\edgelen_v \;\in\; (0, \infty),
+\label{eq:rates}
+\end{equation}
+where $\rate_v$ is the gain (Pólya shape) parameter, $\loss_v$ the
+per-lineage loss rate (Cs21 convention $\loss_v \equiv 1$),
+$\dup_v$ the per-lineage duplication rate, $\edgelen_v$ the edge
+time, and the root convention $\edgelen_\troot = +\infty$. A
+\emph{gene-family profile} is a vector
+$\Prof \in \Z_{\ge 0}^\Leaves$ of integer copy counts at each leaf;
+the data is $\{\Prof_f\}_{f=1}^F$. The free parameter is
+$\Theta = (\rate_v, \dup_v, \edgelen_v)_{v\ne \troot} \cup
+\{\rate_\troot\}$, taking values in the \emph{open} set
+\begin{equation}
+\Theta^\circ
+\;=\;
+(\R_{>0})^N_\rate \;\times\; (\R_{>0})^{N-1}_\dup \;\times\;
+(\R_{>0})^{N-1}_\edgelen.
+\label{eq:openparam}
+\end{equation}
+
+\paragraph{The conserved-copy decomposition.}
+Cs21 decomposes the transition $\xi_{\pa(v)} = n \to \xi_v = m$ on
+edge $\pa(v)\to v$ via the hidden variable
+$\eta_v = $ ``\emph{number of $n$'s lineages that have at least one
+descendant at $v$}'':
+\begin{align}
+\PROB\bigl[\eta_v = s \,\bigl|\, \xi_{\pa(v)} = n\bigr]
+&= \binom{n}{s}\,(1-\survp_v)^s\,\survp_v^{n-s},
+\qquad 0 \le s \le n,
+\label{eq:eta-given-xi}\\
+\PROB\bigl[\xi_v = m \,\bigl|\, \eta_v = s\bigr]
+&= \binom{\rate_v + m - 1}{m - s}\,
+   (1-\survq_v)^{\rate_v + s}\,\survq_v^{m - s},
+\qquad m \ge s.
+\label{eq:xi-given-eta}
+\end{align}
+The two per-edge probabilities $\survp_v, \survq_v$ are determined by
+$(\loss_v, \dup_v, \edgelen_v)$ via the survival map.  Following the
+CM09 SI we use the convention that $\survp_v$ is the probability that
+a single lineage at the top of the edge has \emph{no} surviving
+descendant at the bottom (the parent of $\eta_v$); thus
+$1-\survp_v$ in \eqref{eq:eta-given-xi} is the per-lineage
+\emph{survival} probability. The closed form is
+\begin{equation}
+\survp_v
+=
+\frac{\loss_v\bigl(e^{(\loss_v - \dup_v)\edgelen_v} - 1\bigr)}
+     {\loss_v\,e^{(\loss_v - \dup_v)\edgelen_v} - \dup_v},
+\qquad
+\survq_v
+=
+\frac{\dup_v\bigl(e^{(\loss_v - \dup_v)\edgelen_v} - 1\bigr)}
+     {\loss_v\,e^{(\loss_v - \dup_v)\edgelen_v} - \dup_v},
+\label{eq:surv-explicit}
+\end{equation}
+for $\dup_v > 0$, with the Poisson collapse $\survp_v = e^{-\loss_v\edgelen_v}$,
+$\survq_v = 0$ when $\dup_v = 0$. The map
+$(\loss_v, \dup_v, \edgelen_v) \mapsto (\survp_v, \survq_v)$ is
+smooth on the interior of \eqref{eq:openparam}.
+
+\paragraph{Per-edge transition kernel.}
+Composing \eqref{eq:eta-given-xi} and \eqref{eq:xi-given-eta}:
+\begin{equation}
+T_v(m \mid n)
+\;:=\;
+\sum_{s=0}^{\min(n,m)}
+   \binom{n}{s}\,(1-\survp_v)^s\,\survp_v^{n-s}
+   \cdot \Pol\bigl(m - s \,\big|\, \rate_v + s,\, \survq_v\bigr),
+\label{eq:transition}
+\end{equation}
+where the Pólya (negative-binomial) PMF is
+\begin{equation}
+\Pol(k \mid \alpha, q)
+\;=\;
+\frac{\Gamma(\alpha + k)}{\Gamma(\alpha)\, k!}\,
+q^k (1 - q)^\alpha,
+\qquad k \in \Z_{\ge 0},
+\label{eq:polya-pmf}
+\end{equation}
+i.e.\ the Pólya distribution with shape $\alpha$ and tail $q$.
+Per-family likelihoods $L_f(\Theta) = \PROB[\Prof_f \mid \Theta]$
+are assembled by the inside--outside recursion of CM09; the total
+log-likelihood is $\Ll(\Theta) = \sum_{f=1}^F \log L_f(\Theta)$.
+
+\paragraph{Goal.}
+Characterise
+\begin{equation}
+\Ll^\star \;:=\; \sup_{\Theta\in\Theta^\circ}\Ll(\Theta).
+\label{eq:supgoal}
+\end{equation}
+
+% =================================================================
+\section{The Pólya--Poisson PGF convergence}
+\label{sec:pgf}
+% =================================================================
+
+The point of the next lemma is to identify a parameter-space path
+along which the per-edge offspring distribution converges to a
+Poisson. We use probability generating functions and L\'evy
+continuity (which says that pointwise convergence of PGFs on $[0,1]$
+is equivalent to weak convergence of integer-valued distributions).
+
+The PGF of $\Pol(\alpha, q)$ is, for $|s| < q^{-1}$,
+\begin{equation}
+\PGF_{\alpha, q}(s) \;=\; \E[\,s^X\,]
+\;=\;
+\Bigl(\tfrac{1-q}{1 - q\,s}\Bigr)^{\!\alpha},
+\label{eq:polya-pgf}
+\end{equation}
+and the PGF of $\Poi(\Lambda)$ is
+$\PGF^{\mathrm{Pois}}_\Lambda(s) = e^{\Lambda(s-1)}$.
+
+\begin{lemma}[Pointwise Pólya--Poisson convergence]\label{lem:pgf}
+Fix $\Lambda > 0$. Along any sequence
+$(\alpha_n, q_n) \in \R_{>0}\times(0,1)$ with
+$\alpha_n \to \infty$, $q_n \to 0$, and
+$\alpha_n q_n / (1-q_n) \to \Lambda$,
+\begin{equation}
+\PGF_{\alpha_n, q_n}(s) \;\longrightarrow\; e^{\Lambda(s-1)}
+\qquad \forall s \in [0, 1].
+\label{eq:pgf-conv}
+\end{equation}
+Consequently $\Pol(\alpha_n, q_n) \rightharpoonup \Poi(\Lambda)$
+weakly on $\Z_{\ge 0}$.
+\end{lemma}
+\begin{proof}
+From \eqref{eq:polya-pgf}
+\begin{equation*}
+\log\PGF_{\alpha_n, q_n}(s)
+\;=\;
+\alpha_n\bigl[\log(1-q_n) - \log(1 - q_n s)\bigr].
+\end{equation*}
+For $s \in [0, 1]$ and $q_n \in (0,1)$ both arguments lie in $(0,1)$,
+so the Taylor expansion at $0$ is valid:
+\begin{equation*}
+\log(1 - q_n) = -q_n - \tfrac{q_n^2}{2} + O(q_n^3),
+\qquad
+\log(1 - q_n s) = -q_n s - \tfrac{(q_n s)^2}{2} + O(q_n^3),
+\end{equation*}
+with $O$ constant uniform in $s\in[0,1]$. Substituting,
+\begin{equation*}
+\log\PGF_{\alpha_n, q_n}(s)
+\;=\;
+\alpha_n q_n (s - 1)
+\;+\; \alpha_n q_n^2 \cdot \tfrac{1}{2}(s^2 - 1)
+\;+\; O(\alpha_n q_n^3).
+\end{equation*}
+By hypothesis $\alpha_n q_n \to \Lambda(1 - q_n) \to \Lambda$
+(since $q_n\to 0$), and
+$\alpha_n q_n^2 = (\alpha_n q_n) \cdot q_n \to \Lambda \cdot 0 = 0$,
+and similarly $\alpha_n q_n^3 \to 0$. Hence the right-hand side
+tends to $\Lambda(s-1)$ pointwise, giving \eqref{eq:pgf-conv}.
+Pointwise convergence of PGFs on $[0,1]$ to a continuous limit at
+$s = 1$ implies weak convergence of distributions on $\Z_{\ge 0}$
+(L\'evy continuity for PGFs of integer-valued random variables).
+$\square$
+\end{proof}
+
+\begin{remark}[A sufficient parameter-space path to Lemma~\ref{lem:pgf}]
+\label{rem:suffroute}
+Lemma~\ref{lem:pgf}'s hypothesis is met along $\dup_v \to \infty$
+at fixed $(\loss_v, \edgelen_v)$ \emph{provided} $\rate_v$ is
+co-rescaled. Write $z := e^{(\loss_v - \dup_v)\edgelen_v}$. As
+$\dup_v \to \infty$ this decays exponentially to $0$. From
+\eqref{eq:surv-explicit},
+\begin{align*}
+\survq_v &= \tfrac{\dup_v(1 - z)}{\dup_v - \loss_v z}
+       \;\sim\; 1 - z\;\longrightarrow\; 1,
+\\
+1 - \survq_v &\sim z = e^{-(\dup_v - \loss_v)\edgelen_v}
+\quad(\text{exponentially small}),
+\\
+\survp_v &\;\sim\; \tfrac{\loss_v z}{\dup_v - \loss_v z}
+       \;\sim\; \tfrac{\loss_v}{\dup_v}
+       \;\longrightarrow\; 0
+\quad(\text{algebraically}).
+\end{align*}
+For fixed $\rate_v$, the would-be Poisson mean is
+$\rate_v \survq_v / (1 - \survq_v) \sim \rate_v / z
+= \rate_v e^{(\dup_v - \loss_v)\edgelen_v} \to \infty$,
+so Lemma~\ref{lem:pgf}'s hypothesis is \emph{not} met with $\rate_v$
+fixed. To meet it one must shrink $\rate_v$ along the path with
+$\rate^\star_v \cdot z^{-1} \to \Lambda_v$, i.e.\
+$\rate^\star_v \sim \Lambda_v z \to 0$ at the same exponential rate
+at which $1 - \survq_v$ vanishes.
+This co-rescaling is one \emph{sufficient} path on
+$(\rate_v, \dup_v) \in \Theta^\circ$ realising the per-edge Poisson
+limit. We will see (Remark~\ref{rem:empirical-path}) that the
+optimiser empirically realises a \emph{different}, broader-tailed
+path, but the unboundedness phenomenon is the same.
+\end{remark}
+
+\begin{proposition}[Convergence of per-edge transition kernels]
+\label{prop:edge-conv}
+For fixed bounded $m, n \in \Z_{\ge 0}$, the per-edge transition
+$T_v(m \mid n)$ in \eqref{eq:transition} satisfies, along the
+sufficient path of Remark~\ref{rem:suffroute},
+\begin{equation}
+T_{v,n}(m \mid n) \;\longrightarrow\;
+T^\star_v(m \mid n)
+\;:=\;
+\sum_{s=0}^{\min(n,m)} \binom{n}{s} (1-\survp^\star)^s (\survp^\star)^{n-s}\,
+\Poi\bigl(m - s \,\big|\, \Lambda_v\bigr),
+\label{eq:edge-limit}
+\end{equation}
+with $\survp^\star = \lim_n\survp_{v,n}$ and $\Lambda_v$ the limiting
+Poisson mean of Lemma~\ref{lem:pgf}.
+\end{proposition}
+\begin{proof}
+The binomial factor $\binom{n}{s}(1-\survp)^s\survp^{n-s}$ is
+continuous in $\survp$. The Pólya factor
+$\Pol(m - s \mid \rate + s, \survq)$ converges to
+$\Poi(m - s \mid \Lambda)$ by Lemma~\ref{lem:pgf}, with shape
+$\rate + s$ finite. Each summand of \eqref{eq:transition}
+converges, and the sum is finite ($\le \min(n,m) + 1$ terms);
+limits commute with finite sums. $\square$
+\end{proof}
+
+\begin{corollary}[Likelihood limit along the sufficient path]
+\label{cor:LL-sup-attain}
+Along the Remark~\ref{rem:suffroute} sequence
+$\Theta_n \to (\Theta^\circ)^{\dup_{v_\star} = \infty}$, the
+per-family likelihood limit $L^\star_f := \lim_n L_f(\Theta_n) \in (0,1]$
+exists for every $f$, and $\log L_f$ extends continuously from
+$\Theta^\circ$ to the single boundary point of the path.
+\end{corollary}
+\begin{proof}
+Apply Proposition~\ref{prop:edge-conv} at each edge and propagate
+through the finite-dimensional inside--outside recursion of CM09,
+which is a polynomial assembly of edge kernels and is therefore
+continuous in each. $\square$
+\end{proof}
+
+% =================================================================
+\section{Non-attainment of the supremum}
+\label{sec:nonattain}
+% =================================================================
+
+The next theorem turns Corollary~\ref{cor:LL-sup-attain} into a
+non-attainment statement: the LL strictly increases along the
+asymptote but never reaches its limit at any finite parameter.
+
+\begin{theorem}[Non-attainment along the sufficient path]
+\label{thm:unbounded}
+Let $\Theta_n$ be the Remark~\ref{rem:suffroute} sequence at boundary
+node $v_\star$, and let $L^\star_f := \lim_n L_f(\Theta_n)$ as in
+Corollary~\ref{cor:LL-sup-attain}. Suppose there exists a family
+$f_0$ for which
+\begin{equation}
+L_{f_0}(\Theta_n) \;<\; L^\star_{f_0}
+\qquad \text{for all } n \text{ sufficiently large.}
+\label{eq:strict-suff}
+\end{equation}
+Then the limiting value
+$\Ll^\star_{\mathrm{path}} := \sum_f \log L^\star_f$ is finite,
+equals the supremum of $\Ll$ along the path, and is not attained at
+any point of the path: $\Ll(\Theta_n) < \Ll^\star_{\mathrm{path}}$
+for every such $n$, with strict approach as $n\to\infty$.
+\end{theorem}
+\begin{proof}
+By Corollary~\ref{cor:LL-sup-attain},
+$\log L_f(\Theta_n) \to \log L^\star_f$ along the path for every $f$,
+with $L^\star_f \in (0, 1]$, so the sum
+$\Ll^\star_{\mathrm{path}} = \sum_f \log L^\star_f$ is finite (each
+summand is $\le 0$ and the sum is over a finite index $f=1,\ldots,F$).
+For $n$ large enough,
+\begin{align*}
+\Ll(\Theta_n) - \Ll^\star_{\mathrm{path}}
+&\;=\; \sum_{f \neq f_0}\bigl[\log L_f(\Theta_n) - \log L^\star_f\bigr]
+\;+\; \bigl[\log L_{f_0}(\Theta_n) - \log L^\star_{f_0}\bigr].
+\end{align*}
+The first sum tends to $0$, and the second is strictly negative by
+\eqref{eq:strict-suff}. Hence
+$\Ll(\Theta_n) < \Ll^\star_{\mathrm{path}}$ for all such $n$, and
+$\Ll(\Theta_n) \uparrow \Ll^\star_{\mathrm{path}}$ from below.
+$\square$
+\end{proof}
+
+\begin{remark}[Genericity of \eqref{eq:strict-suff}]
+\label{rem:genericity}
+Condition \eqref{eq:strict-suff} fails only when every family's
+likelihood is already maximised by an interior point and the boundary
+strictly worsens it. For real gene-family data this is rarely the
+case: typically at least one family has a sub-Pólya empirical
+variance at some clade and benefits from the Poisson asymptote at
+the corresponding internal node.
+\end{remark}
+
+\begin{remark}[The empirical optimiser path is broader]
+\label{rem:empirical-path}
+On arc269 (\S\ref{sec:numerical}) the optimiser finds
+$\dup_{v_\star} \approx 5.6\times10^9$ at one internal node, so
+$1 - \survq_{v_\star}$ is of order $10^{-9}$ in $\edgelen_{v_\star}$.
+But the corresponding $\rate_{v_\star} \approx 1.76\times 10^3$ ---
+\emph{not} the exponentially small $\rate^\star_{v_\star}$ required
+by Remark~\ref{rem:suffroute} (where one would need
+$\rate_{v_\star} \sim z \approx 10^{-9}$). The empirical path
+therefore has
+$\rate_{v_\star} \survq_{v_\star}/(1 - \survq_{v_\star}) \to \infty$;
+its per-edge kernel sends offspring mass to $+\infty$, not to a
+proper Poisson limit. The Pólya PGF $\PGF_{\alpha_n, q_n}(s) \to 0$
+for every $s\in[0,1)$ while $\PGF_{\alpha_n, q_n}(1) = 1$ --- so
+the offspring distribution escapes to infinity.
+
+\emph{Why does the LL still climb?} At $v_\star$ many families
+require many copies to be ``emitted'' at that node, and the GLD
+parameters elsewhere cannot supply them; pushing both
+$\dup_{v_\star}$ and $\rate_{v_\star}$ large gives a very
+heavy-tailed Pólya offspring with both mean and variance diverging,
+and the joint LL improves until line-search precision stalls.
+A precise analytical characterisation of \emph{this} broader
+asymptote is beyond our scope; Lemma~\ref{lem:pgf} establishes that
+\emph{one} mechanism gives unboundedness, and the empirical path
+exhibits the same phenomenon within a wider class.
+\end{remark}
+
+\begin{proposition}[Quantitative gap]\label{prop:gap-quant}
+Let $v_\star$ be any node. For every $\epsilon > 0$ there exists a
+finite log-rate budget $B_\epsilon < \infty$ such that
+\begin{equation}
+\sup_{\substack{\Theta \in \Theta^\circ\\\log\dup_{v_\star} \le B_\epsilon}}
+\Ll(\Theta)
+\;\ge\;
+\Ll^\star_{\mathrm{path}} - \epsilon,
+\label{eq:gap}
+\end{equation}
+and the supremum is attained at a finite interior point.
+\end{proposition}
+\begin{proof}
+By Corollary~\ref{cor:LL-sup-attain}, $\Ll(\Theta_n) \to \Ll^\star_{\mathrm{path}}$
+along the Remark~\ref{rem:suffroute} sequence. Choose $n_0$ with
+$\Ll(\Theta_{n_0}) > \Ll^\star_{\mathrm{path}} - \epsilon$ and set
+$B_\epsilon = \log\dup_{v_\star, n_0}$.  The point $\Theta_{n_0}$ is
+interior and witnesses \eqref{eq:gap}.  Since the constrained
+problem ``$\log\dup_{v_\star} \le B_\epsilon$'' is the
+intersection of $\Theta^\circ$ with a closed half-space, its
+attainment requires only continuity of $\Ll$ and compactness of the
+super-level set, which follow from the smoothness of the survival
+map. $\square$
+\end{proof}
+
+\begin{remark}[What Theorem~\ref{thm:unbounded} does \emph{not} claim]
+The theorem establishes non-attainment along the specific sufficient
+asymptote of Remark~\ref{rem:suffroute}. It does not assert that
+the global supremum
+$\sup_{\Theta\in\Theta^\circ}\Ll$ equals $\Ll^\star_{\mathrm{path}}$:
+a separate interior critical point with higher likelihood is not
+ruled out. Numerically no such interior critical point has been
+found on arc269 across our multistart sweeps
+(\S\ref{sec:numerical}); the empirical optimum is always asymptote.
+Theorem~\ref{thm:unbounded} is therefore conservative ---
+non-attainment in the only direction the optimiser actually probes.
+\end{remark}
+
+% =================================================================
+\section{Resolution: a coercive MAP objective}
+\label{sec:map}
+% =================================================================
+
+The Pólya--Poisson asymptote is a property of the GLD likelihood
+considered on $\Theta^\circ$ alone. Adding a weakly informative
+log-Normal prior on the rates removes the pathology by making the
+objective coercive on log-rate coordinates.
+
+\begin{definition}[Weakly informative log-Normal prior]
+For each non-root node $v$ and the root gain, define independently
+\begin{equation}
+\log\rate_v \sim \mathcal{N}(m_\rate, \sigma^2),
+\qquad
+\log\dup_v \sim \mathcal{N}(m_\dup, \sigma^2),
+\qquad
+\log\edgelen_v \sim \mathcal{N}(m_\edgelen, \sigma^2),
+\label{eq:lognormal}
+\end{equation}
+with default centres $m_\rate = \log 0.1$, $m_\dup = \log 0.5$,
+$m_\edgelen = \log 1$ (biologically reasonable defaults), and
+$\sigma = 1$.
+\end{definition}
+
+The MAP objective is
+\begin{equation}
+\Ll^{\mathrm{MAP}}(\Theta)
+\;:=\;
+\Ll(\Theta) + \log p_\pi(\Theta)
+\;=\;
+\Ll(\Theta) \;-\; \tfrac{1}{2\sigma^2}\!\!\sum_{v\ne\troot}
+   \bigl[(\log\rate_v - m_\rate)^2
+       + (\log\dup_v - m_\dup)^2
+       + (\log\edgelen_v - m_\edgelen)^2\bigr]
+\;+\; \mathrm{const.}
+\label{eq:mapobj}
+\end{equation}
+
+\begin{theorem}[Coercivity of the MAP objective]
+\label{thm:map-coercive}
+For any $\sigma < \infty$, the MAP objective \eqref{eq:mapobj} is
+coercive on $\Theta^\circ$ in log-rate coordinates:
+$\Ll^{\mathrm{MAP}}(\Theta_n) \to -\infty$ whenever any one of
+$|\log\rate_{v,n}|, |\log\dup_{v,n}|, |\log\edgelen_{v,n}|$
+tends to $+\infty$. The supremum of $\Ll^{\mathrm{MAP}}$ on
+$\Theta^\circ$ is attained at an interior point.
+\end{theorem}
+\begin{proof}
+For each family $f$, $L_f(\Theta) \in (0,1]$, so
+$\log L_f(\Theta) \le 0$. Summing over the finitely many families,
+$\Ll(\Theta) \le 0$ uniformly on $\Theta^\circ$, hence bounded
+above.
+
+The prior term in \eqref{eq:mapobj} is the quadratic form
+$-\tfrac{1}{2\sigma^2}\|\log\Theta - m\|_2^2 + \mathrm{const}$
+with full-rank precision $1/\sigma^2 \cdot I$, so it tends to
+$-\infty$ at quadratic rate as any one of $|\log\rate_v|,
+|\log\dup_v|, |\log\edgelen_v|$ goes to infinity. A bounded
+likelihood plus a quadratic prior that tends to $-\infty$ gives
+$\Ll^{\mathrm{MAP}}(\Theta_n)\to -\infty$, which is coercivity.
+
+Coercivity together with continuity of $\Ll^{\mathrm{MAP}}$ (the
+likelihood is smooth on $\Theta^\circ$ from the survival map; the
+prior is a smooth quadratic) implies every super-level set
+$\{\Theta : \Ll^{\mathrm{MAP}}(\Theta) \ge c\}$, for $c$ inside the
+attained range, is non-empty, bounded by coercivity, hence compact
+(in the log-rate coordinates) on which a continuous function attains
+its supremum. $\square$
+\end{proof}
+
+\begin{remark}[Calibration of $\sigma = 1$]
+With $\sigma = 1$ the 99\,\% prior credible interval for each rate
+is $[m \cdot e^{-2.58}, m \cdot e^{2.58}]$, i.e.\ roughly two orders
+of magnitude wide. The quadratic prior cost at
+$\log\dup_v = \log(5.6\times10^9) - m_\dup \approx 22.5$ is
+$22.5^2/2 \approx 253$ nat per such node, comfortably outweighing
+the $\sim 20{,}000$-nat asymptote gain at a single node when
+counted across the full prior; in practice the MAP optimum lands at
+$\max_v\dup_v \approx 43$, $\max_v\rate_v \approx 0.12$ ---
+biologically interpretable rates, far from any boundary.
+\end{remark}
+
+% =================================================================
+\section{Numerical evidence: arc269}
+\label{sec:numerical}
+% =================================================================
+
+\paragraph{Dataset.}
+The 269-leaf archaeal phylogeny of Cs26 (\texttt{tree269-baker-alti-gtdb};
+$F = 90{,}243$ families, $N = 537$ nodes, filter $\Omega_{\min} = 1$)
+is the largest dataset bundled with the paper. We report fits using
+the consolidated driver \texttt{validation/ml.py} with clip
+$B = 50$ (rates in $[2\times10^{-22},\, 5\times10^{21}]$).
+
+\paragraph{Multiple basins, all on the asymptote.}
+Two distinct ML optimiser trajectories are observed.
+
+\begin{itemize}[leftmargin=*]
+\item \textbf{Simple-ML basin} (single warm-restart BFGS from default
+init): $\Ll = -1{,}129{,}653$, $\bar\xi_\troot = 8{,}664$ root copies,
+$3{,}533$ root families, copies/family $2.45$.  Rate distribution:
+$\max\rate_v = 1{,}540$, $\max\dup_v = 7.6\times10^9$.
+\item \textbf{Polish basin} (multistart + lognormal polish at
+$\sigma = 0.10$): $\Ll = -1{,}109{,}266$
+($+20{,}387$ nat over the simple-ML basin),
+$\bar\xi_\troot = 8{,}963$ root copies,
+$3{,}608$ root families, copies/family $2.48$. Rate distribution:
+$\max\rate_v = 1{,}763$, $\max\dup_v = 5.63\times10^9$ (a single
+internal node carries the entire boundary load; the second-largest
+$\dup_v$ in the rate vector is $124$, eight orders of magnitude
+below).
+\end{itemize}
+Both basins are sequences along the asymptote of
+Remark~\ref{rem:empirical-path} at one node $v_\star$; the polish
+basin has simply climbed further up the same asymptote
+(cf.\ Proposition~\ref{prop:gap-quant} with smaller $\epsilon$).
+
+\paragraph{Independent confirmation from the focal subsets.}
+The same phenomenon is visible on the smaller subset clades
+(D80, P75, E114, ED194), but softer: Cs26's published ML rates report
+$\max\rate_v \approx 10^{14}$ on these subsets (Java GUI inspection
+of the bundled \texttt{.countxml.gz}). At the subset scale this
+drives only a $\sim 20\%$ spread in $\bar\xi_\troot$ between
+alternative boundary climbs; at the arc269 scale (with $\sim 20\times$
+more families and a larger tree), the same mechanism inflates
+$\bar\xi_\troot$ by $2$--$3\times$.
+
+\paragraph{MAP $\sigma=1$ fits land in the interior.}
+On the four focal subsets, MAP with $\sigma=1$ lands within
+$\pm 300$ nat of the published Cs26 ML values and within $\pm 20\%$
+on $\bar\xi_\troot$, so the prior does not distort the
+non-boundary-pathological subsets. On arc269, the MAP from default
+uniform initialisation converges to raw $\Ll = -1{,}117{,}480$
+(\,$-\log P_{\mathrm{MAP}} = 1{,}120{,}615$ including the
+$-3{,}135$-nat prior cost), with $\bar\xi_\troot = 5{,}906$ root
+copies, $3{,}108$ root families, copies/family $1.90$,
+$\max\dup_v = 43$, $\max\rate_v = 0.12$ (interior, far from any
+boundary). A 15-start lognormal-perturbation bootstrap discovers an
+even deeper basin at $-\log P = 1{,}098{,}463$, raw
+$\Ll = -1{,}096{,}512$, $\sim 22{,}000$ nat below the cold-start
+basin --- showing that the MAP objective has multiple local maxima
+even at $\sigma = 1$ and that multistart is required to locate the
+global mode.
+
+\begin{center}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & $\Ll$ & $\bar\xi_\troot$ & root fam.\ & cp/fam & $\max\dup_v$ \\
+\midrule
+Cold-start ML ($B=50$) & $-1{,}129{,}653$ & $8{,}664$ & $3{,}533$ & $2.45$ & $7.6\times10^9$ \\
+Multistart-polish ML ($B=50$) & $-1{,}109{,}266$ & $8{,}963$ & $3{,}608$ & $2.48$ & $5.6\times10^9$ \\
+MAP $\sigma=1$ (cold start) & $-1{,}117{,}480^{\dagger}$ & $5{,}906$ & $3{,}108$ & $1.90$ & $43$ \\
+\textbf{MAP $\sigma=1$ (15-start global)} & $\mathbf{-1{,}096{,}512^{\dagger}}$ & $\mathbf{5{,}426}$ & $\mathbf{3{,}070}$ & $\mathbf{1.77}$ & $\mathbf{28}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small $^{\dagger}$ pure log-likelihood at the MAP estimate, not
+the regularised objective.}
+
+% =================================================================
+\section{Biological consequences and method-selection guidance}
+\label{sec:biology}
+% =================================================================
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{ML alone is not enough for ancestral reconstruction at
+depth.} The two ML basins on arc269 differ only in how far along
+the asymptote the optimiser climbed; they do not represent distinct
+biological inferences. The biological quantity of interest, the
+root genome size $\bar\xi_\troot$, is sensitive to the (essentially
+arbitrary) stopping criterion of the optimiser.
+\item \textbf{The MAP $\sigma=1$ 15-start global estimate} (root
+copies $5{,}426$, root families $3{,}070$, copies/family $1.77$) is
+our recommended LACA quote. The cold-start MAP basin is itself an
+interior local optimum $\sim 22{,}000$ nat above the global ---
+showing that even with the prior, multistart is required.
+\item \textbf{Cs26's published focal-subset fits are also on the
+asymptote.} With $\max\rate_v\approx 10^{14}$ on D80--ED194
+(log-rate $\sim 32$, well below the $B=50$ clip but well above any
+biologically interpretable range), every published reconstruction
+is technically a boundary artefact; the small magnitude on the
+4-subset fits keeps the practical impact below $\pm 20\%$ in
+$\bar\xi_\troot$, but the underlying behaviour is the same as on
+arc269.
+\item \textbf{The boundary issue is a model feature, not a data
+feature.} Any GLD reconstruction at depth without modelling
+horizontal gene transfer (HGT) will exhibit the same asymptote ---
+the optimiser is asking for a Poisson immigration source, and
+without HGT in the model the only place to put one is at a Pólya
+boundary.
+\item \textbf{ALE-style models including HGT may shift LACA
+estimates downward}, since families currently absorbed into the
+``inflated ancestor + asymptote'' will be explained by horizontal
+transfer events. The MAP $\sigma=1$ quote here is the cleanest
+GLD-only baseline against which to measure that shift.
+\end{enumerate}
+
+% =================================================================
+\appendix
+\section{The transition-kernel limit at $\survp_v = 0$}
+% =================================================================
+
+For completeness we record the form of $T^\star_v$
+(Proposition~\ref{prop:edge-conv}) when in addition
+$\survp_v^\star = 0$ (parent-survival collapses): only the $s=0$ term
+of the binomial survives, giving
+\begin{equation}
+T^\star_v(m \mid n) \;=\; \Poi(m \mid \Lambda_v),
+\label{eq:edge-collapsed}
+\end{equation}
+\emph{independent of $n$}. The parent count is forgotten, so the
+subtree below $v$ contributes a constant per-family Poisson factor.
+This is the degenerate limit at which the inferred ancestor becomes
+literally a Poisson immigration source.
+
+% =================================================================
+\section{Why a finite log-rate clip alone is a less elegant fix}
+\label{app:clip}
+% =================================================================
+
+A finite log-rate clip $B<\infty$ is equivalent to a uniform improper
+prior on $[m_a - B, m_a + B]$ in log-rate space (and $0$ outside).
+This prior is non-smooth (a hard wall at $|\log\cdot| = B$), so the
+clipped MLE can sit on the boundary of the clip set itself with
+$\dup_v = e^B$.  With $B = 50$ in our numerics the clip is rarely
+attained (the optimiser stalls at $\log\dup_{v_\star} \approx 22$
+due to line-search precision), so the clipped problem behaves as
+unbounded and inherits all the asymptote pathology characterised in
+Theorem~\ref{thm:unbounded}--Proposition~\ref{prop:gap-quant}.
+
+The MAP prior \eqref{eq:lognormal} achieves the same boundedness
+through a \emph{smooth} quadratic cost. Both objectives are coercive,
+but only the smooth one yields a unique optimum that is robust to
+optimiser choice and stopping criterion.
+
+\end{document}

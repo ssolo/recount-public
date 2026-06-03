@@ -1,0 +1,11 @@
+# Continuation queue — order reflects priority: arc269 cold ML + MAP +
+# profile likelihood ALL ahead of arc269 sota_ml_1start, because cold/MAP
+# are the must-have numbers and sota_ml is "nice to have a deeper basin".
+#
+# Last item (sota_ml_1start) only fires if cores remain after the others
+# land — chain_after_pool.sh then starts the cold ML batch.
+ed194 map_sigma1
+arc269 csuros_match
+arc269 map_sigma1
+arc269 map_sigma1_15start
+arc269 sota_ml_1start

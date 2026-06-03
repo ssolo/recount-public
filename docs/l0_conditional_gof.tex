@@ -1,0 +1,650 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm, bm}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+
+\hypersetup{colorlinks=true, urlcolor=blue, linkcolor=blue}
+
+% -- Csurös-style notation (CM09 SI / Csurös 2021 arXiv) ------------------
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\PROB}{\mathbb{P}}
+\newcommand{\1}{\mathbf{1}}
+\newcommand{\Tree}{\mathcal{T}}
+\newcommand{\Leaves}{\mathcal{L}}
+\newcommand{\troot}{R}
+\newcommand{\Prof}{\boldsymbol{\xi}}
+\newcommand{\Om}{\Omega}
+\newcommand{\rate}{\kappa}
+\newcommand{\dup}{\lambda}
+\newcommand{\loss}{\mu}
+\newcommand{\edgelen}{t}
+\newcommand{\survp}{\tilde p}
+\newcommand{\survq}{\tilde q}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+\title{Conditional goodness-of-fit for gain--loss--duplication fits:\\
+       separating shape from mass under filter thresholding}
+\author{\texttt{recount} project\\
+        \textit{notation following CM09 SI and Cs\H{u}r\"os 2021 arXiv}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{\small\textbf{Provenance and disclaimer.}
+This document was drafted by Claude (Anthropic's LLM, model
+\texttt{claude-opus-4-7[1m]}) in collaboration with the human author,
+as part of an interactive Claude Code session
+(\url{https://claude.com/claude-code}). The mathematical content is
+elementary (conditional probability + bin re-normalisation); the
+four numerical identities of \S\ref{sec:identities} were checked at
+machine precision against the live
+\texttt{unobserved\_logL0\_native} routine
+in \texttt{recount.native\_backend}, evaluated on the arc269
+\texttt{mc=1}, \texttt{sum$\ge$4}, and other arc269 fits saved
+under \texttt{validation/outputs/}. Reproduced inline by
+\texttt{validation/l0\_goodness\_of\_fit.py}. Treat as
+``LLM-drafted, human-checked, identity-validated'' engineering
+documentation rather than peer-reviewed manuscript content.}}
+\end{center}
+
+\begin{abstract}
+Every GLD fit ships with a filter threshold $\Om_{\min}$ that decides
+which families are visible to the optimiser. The fitted rate process
+then predicts \emph{both} the visible distribution (the
+$\Om \ge \Om_{\min}$ tail) and an implicit unobserved stratum
+(the $\Om < \Om_{\min}$ mass below the filter). We give a rigorous
+goodness-of-fit framework that compares model-predicted versus
+empirical sum-bin counts in two complementary ways: an
+\emph{unconditional} test that includes both the visible and
+unobserved strata, and a \emph{conditional} test that re-normalises
+both pipelines to a common $\Om\ge k_{\min}$ universe. The conditional
+test isolates the \emph{shape} of the rate process from the question
+of total mass calibration --- a separation that lets us diagnose
+whether a fit's misfit is carried by the singleton stratum
+(plausibly contaminated by annotation noise and tip-branch
+\emph{de novo} events) or by a deeper distributional mismatch.
+We prove the relevant consistency identities
+(\S\ref{sec:identities}), all four of which are verified to
+machine precision against the live arc269 fits.
+\end{abstract}
+
+% =================================================================
+\section{Biological motivation}
+\label{sec:bio-motivation}
+% =================================================================
+
+A GLD fit at filter $\Om_{\min}$ only sees families with summed copy
+number $\Om \ge \Om_{\min}$. On arc269 the default no-filter fit
+($\Om_{\min} = 1$) sees all $F = 90{,}243$ observed families, but a
+fit at $\Om_{\min} = 4$ sees only the $\sim 11{,}500$ families with
+sum $\ge 4$, treating the other $\sim 78{,}700$ small families as
+``unobserved.'' Cs26's own published reconstructions use
+$\Om_{\min} = 4$ throughout; this is a methodological choice, not a
+property of the data.
+
+\paragraph{What it means to ``fit'' under a filter.}
+The likelihood is conditioned on $\Om(\Prof) \ge \Om_{\min}$ for every
+visible family, and the rate process implicitly predicts the
+unobserved mass $\PROB[\Om(\Prof) < \Om_{\min}]$ at the fitted rates.
+A good fit therefore needs two consistencies:
+\begin{itemize}[leftmargin=*]
+\item \emph{Shape consistency:} the bin-by-bin distribution of
+sums in the visible tail $\Om \ge \Om_{\min}$ should match the
+empirical histogram of family sums on that tail.
+\item \emph{Mass consistency:} the predicted total
+$F^* = F / (1 - \PROB[\Om<\Om_{\min}])$ should match what the rate
+process implies about the population size of families that ever
+existed.
+\end{itemize}
+The two are independent: a fit can get the shape of the visible tail
+right but predict the wrong total mass, or it can predict the right
+total mass but get the visible-tail shape wrong. The framework
+below lets us tell which.
+
+\paragraph{Why singletons matter biologically.}
+The singleton stratum ($\Om = 1$: families present at exactly one
+leaf) is the most suspect part of the dataset on biological grounds:
+it is the most enriched in annotation noise (false-positive gene
+calls), in recent lineage-specific gains that have not yet had time
+to duplicate, and in horizontal gene transfers not modelled by GLD.
+A GLD model that perfectly captures \emph{duplicative} family
+dynamics could plausibly still fail at $\Om = 1$ just because the
+$\Om=1$ stratum is being generated by a non-GLD process. The
+conditional test at $k_{\min} = 2$ (singletons removed) lets us ask
+whether the model gets the rest of the distribution right.
+
+\paragraph{What this document does.}
+\S\ref{sec:setup} fixes notation; \S\ref{sec:L0} introduces $L(0,N)$
+(the model's prediction of unobserved mass) and the implied bin
+probabilities; \S\ref{sec:Fstar} the amplification factor $F^*$;
+\S\ref{sec:uncond} the unconditional test; \S\ref{sec:cond} the
+conditional test; \S\ref{sec:identities} the four consistency
+identities, with proofs; \S\ref{sec:interpret} the interpretive
+discussion; \S\ref{sec:arc269} the arc269 case study.
+
+% =================================================================
+\section{Setup and notation}
+\label{sec:setup}
+% =================================================================
+
+\paragraph{Tree and profiles.}
+Let $\Tree = (V, E, \troot)$ be a rooted phylogeny with leaf set
+$\Leaves \subset V$. A \emph{gene-family profile} is a vector
+$\Prof \in \Z_{\ge 0}^\Leaves$ of integer copy counts at each leaf.
+The \emph{total profile sum} is
+\begin{equation}
+\Om(\Prof) \;:=\; \sum_{v \in \Leaves} \xi_v \;\in\; \Z_{\ge 0}.
+\label{eq:omega-def}
+\end{equation}
+
+\paragraph{Fitted rate process and filter.}
+Under fitted GLD rates $\theta = (\rate, \loss, \dup, \edgelen)$ per
+branch, a randomly drawn profile $\Prof \sim \PROB(\cdot \mid \theta)$
+is a random variable on $\Z_{\ge 0}^\Leaves$ and $\Om(\Prof)$ is its
+random sum. Each fit has a \emph{filter threshold}
+$\Om_{\min} \in \{1, 2, 3, \dots\}$; the likelihood is conditioned on
+$\Om(\Prof) \ge \Om_{\min}$ for every visible family.
+
+\paragraph{The arc269 example.}
+arc269 has $F = 90{,}243$ families, all with $\Om \ge 1$. Sum-bin
+counts:
+\[
+\renewcommand{\arraystretch}{1.1}
+\begin{array}{rrrrrrrrr}
+\toprule
+\Om = k         & 1     & 2     & 3     & 4     & 5     & 6     & 7     & \ge 8 \\
+\midrule
+\#\text{families} & 65{,}339 & 9{,}491 & 3{,}859 & 2{,}062 & 1{,}176 & 851 & 644 & 6{,}821 \\
+\bottomrule
+\end{array}
+\]
+A fit at $\Om_{\min} = 4$ sees only $F^{\ge 4} = 11{,}554$ families;
+the model never observes the $F^{<4} = 78{,}689$ smaller profiles
+during fitting.
+
+% =================================================================
+\section{$L(0,N)$ and the model's bin probabilities}
+\label{sec:L0}
+% =================================================================
+
+\begin{definition}[Below-threshold mass]\label{def:L0}
+Under fitted rates $\hat\theta$, define
+\begin{equation}
+L(0, N)
+\;:=\;
+\PROB\bigl[\Om(\Prof) < N \,\bigm|\, \hat\theta\bigr],
+\qquad N \in \Z_{\ge 0}.
+\label{eq:L0-def}
+\end{equation}
+\end{definition}
+
+$L(0, N)$ is computable by the $P_n$-tensor recursion of
+Cs\H{u}r\"os 2026 SI Theorems 3--5 (Algorithm Uinner); in our
+implementation it is the routine
+\texttt{recount.native\_backend.unobserved\_logL0\_native}
+applied to the fitted rates with \texttt{min\_copies=N}. Bit-perfect
+agreement with the Java reference is established at $N\in\{1,2,4\}$;
+the recursion extends to arbitrary $N \ge 1$ via the same algorithm.
+
+\begin{lemma}[Monotonicity and limits of $L(0,\cdot)$]
+$L(0, \cdot)$ is non-decreasing on $\Z_{\ge 0}$:
+$L(0, N) \le L(0, N+1)$. Moreover
+$L(0, 0) = 0$, $L(0, 1) = \PROB(\Om = 0)$, and
+$\lim_{N\to\infty} L(0, N) = 1$.
+\end{lemma}
+\begin{proof}
+$\{\Om < N\} \subseteq \{\Om < N+1\}$ gives monotonicity; the
+limits are immediate from $\{\Om \ge 0\} = $ entire sample space.
+$\square$
+\end{proof}
+
+\begin{proposition}[Bin probabilities by telescope]\label{prop:bins}
+Under the fitted process,
+\begin{equation}
+\PROB\bigl[\Om(\Prof) = k\bigr]
+\;=\;
+L(0,\, k+1) - L(0,\, k),
+\qquad k\in\Z_{\ge 0},
+\label{eq:bin-prob}
+\end{equation}
+with convention $L(0,0)=0$. Consequently
+$\sum_{k=0}^\infty \PROB[\Om=k] = 1$.
+\end{proposition}
+\begin{proof}
+$\{\Om = k\} = \{\Om < k+1\} \setminus \{\Om < k\}$ with
+$\{\Om < k\} \subseteq \{\Om < k+1\}$, so the probability is the
+difference. Summing telescopes to
+$\lim_{N\to\infty} L(0, N) - L(0,0) = 1 - 0 = 1$. $\square$
+\end{proof}
+
+\paragraph{Numerical check.}
+On the arc269 mc=1 Brownian fit, summing the bin probabilities
+$P(\Om = 0) + \sum_{k=1}^{29} P(\Om = k) + P(\Om \ge 30)$ gives
+$1.0000000000$ to ten decimal places. The recursion satisfies the
+identity exactly (\texttt{validation/l0\_goodness\_of\_fit.py}).
+
+% =================================================================
+\section{The amplification factor $F^*$}
+\label{sec:Fstar}
+% =================================================================
+
+The fit conditions on $\Om \ge \Om_{\min}$, so the rate process
+generates an \emph{unobserved} stratum at $\Om < \Om_{\min}$ that the
+fit cannot see. The model's prediction is calibrated by amplifying
+the visible count up to the implied total population.
+
+\begin{proposition}[Cs\H{u}r\"os amplification]\label{prop:Fstar}
+If the dataset $\{\Prof_f\}_{f=1}^F$ of $F$ visible families is a
+sample from the rate process restricted to $\Om \ge \Om_{\min}$, the
+rate process's implied total family count is
+\begin{equation}
+F^* \;:=\; \frac{F}{1 - L(0, \Om_{\min})},
+\label{eq:Fstar}
+\end{equation}
+satisfying the identity $F^* (1 - L(0, \Om_{\min})) = F$ by
+construction.
+\end{proposition}
+
+\paragraph{Interpretation.}
+$F^*$ is the model's estimate of how many families the rate process
+would have generated if no filter were applied. The factor
+$1/(1 - L(0, \Om_{\min}))$ is the inverse of the fraction of families
+that pass the filter; multiplying by $F$ undoes the conditioning.
+Equivalently, the model is saying ``\emph{for each visible family, on
+average there are $F^*/F$ families in the underlying population.}''
+
+\paragraph{Numerical check.}
+For the arc269 \texttt{sum}\,$\ge 4$ fit, $F = 11{,}554$ and
+$L(0, 4) = 0.0427$ give
+$F^* = 11{,}554 / 0.9573 = 12{,}069$, and
+$F^*(1 - L(0,4)) = 11{,}554.0$ exactly.
+
+% =================================================================
+\section{The unconditional goodness-of-fit test}
+\label{sec:uncond}
+% =================================================================
+
+The unconditional test posits the strongest version of the model:
+the rate process generates $F^*$ families, and we see those whose
+sum passes the filter.
+
+\begin{definition}[Unconditional predicted count]\label{def:uncond}
+The unconditional predicted count at bin $k$ is
+\begin{equation}
+\mathrm{pred}_{\mathrm{unc}}(k)
+\;:=\;
+F^* \cdot \PROB\bigl[\Om(\Prof) = k\bigr].
+\label{eq:pred-uncond}
+\end{equation}
+The unconditional pred/emp ratio is
+\begin{equation}
+\rho_{\mathrm{unc}}(k)
+\;:=\;
+\frac{\mathrm{pred}_{\mathrm{unc}}(k)}{E(k)},
+\qquad
+E(k) := \#\{f : \Om(\Prof_f) = k\}.
+\label{eq:rho-uncond}
+\end{equation}
+\end{definition}
+
+The hypothesis under test is ``the rate process generated $F^*$ total
+families, and the visible $F$ are its $\Om \ge \Om_{\min}$ slice.''
+For a well-calibrated fit, $\rho_{\mathrm{unc}}(k)\approx 1$ for
+every $k\ge 1$ --- both inside the visible range
+$k\ge\Om_{\min}$ and below the threshold $k < \Om_{\min}$ (where the
+model's prediction is its own implicit self-prediction of the
+unobserved stratum, against which the actual empirical small-family
+counts can be checked).
+
+\paragraph{What the unconditional test is doing.}
+The identity $F^*(1-L(0,\Om_{\min}))=F$ holds by construction, so
+$F^*$ is not an independent prediction of the fit --- it is just $F$
+divided by the visible mass fraction the rate process implies.
+What an off-1 unconditional ratio reveals is one (or both) of two
+discrepancies: the fitted bin shape $\PROB[\Om=k]$ disagrees with
+the empirical shape at the bin in question, \emph{or} the fitted
+below-threshold mass $L(0,\Om_{\min})$ disagrees with the empirical
+below-threshold count (which is observable when one compares to
+the full arc269 histogram, not just the $\Om\ge\Om_{\min}$ slice
+the fit was trained on). The two contributions are entangled in
+the same ratio; the conditional test below isolates the shape side.
+
+% =================================================================
+\section{The conditional goodness-of-fit test}
+\label{sec:cond}
+% =================================================================
+
+To isolate shape from mass, re-normalise both pipelines to a common
+$\Om\ge k_{\min}$ universe.
+
+\begin{definition}[Conditional bin probability]\label{def:cond-P}
+For $k\ge k_{\min}$,
+\begin{equation}
+\PROB\bigl[\Om(\Prof) = k \,\big|\, \Om(\Prof) \ge k_{\min}\bigr]
+\;=\;
+\frac{\PROB[\Om = k]}{\PROB[\Om\ge k_{\min}]}
+\;=\;
+\frac{\PROB[\Om = k]}{1 - L(0, k_{\min})}.
+\label{eq:cond-prob}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Empirical $\Om\ge k_{\min}$ total]
+\begin{equation}
+E^{\ge k_{\min}}
+\;:=\;
+\#\{f \in \mathcal{D}_{\text{full}} : \Om(\Prof_f) \ge k_{\min}\}.
+\label{eq:E-ge}
+\end{equation}
+On arc269: $E^{\ge 1} = 90{,}243$, $E^{\ge 2} = 24{,}904$,
+$E^{\ge 3} = 15{,}413$, $E^{\ge 4} = 11{,}554$.
+\end{definition}
+
+\begin{definition}[Conditional predicted count]\label{def:cond}
+For $k\ge k_{\min}$,
+\begin{equation}
+\mathrm{pred}_{\mathrm{cond}}^{(k_{\min})}(k)
+\;:=\;
+E^{\ge k_{\min}}
+\cdot
+\PROB\bigl[\Om = k \,\big|\, \Om\ge k_{\min}\bigr]
+\;=\;
+E^{\ge k_{\min}}
+\cdot
+\frac{\PROB[\Om = k]}{1 - L(0, k_{\min})}.
+\label{eq:pred-cond}
+\end{equation}
+The conditional pred/emp ratio is
+$\rho_{\mathrm{cond}}^{(k_{\min})}(k) := \mathrm{pred}_{\mathrm{cond}}^{(k_{\min})}(k) / E(k)$.
+\end{definition}
+
+\begin{lemma}[Conditional mass conservation]
+By construction
+\begin{equation}
+\sum_{k = k_{\min}}^\infty
+   \mathrm{pred}_{\mathrm{cond}}^{(k_{\min})}(k)
+\;=\;
+E^{\ge k_{\min}}
+\;=\;
+\sum_{k = k_{\min}}^\infty E(k).
+\label{eq:cond-mass}
+\end{equation}
+The conditional test conserves total mass on the $\ge k_{\min}$
+universe; deviations of $\rho_{\mathrm{cond}}$ from~1 across bins
+reflect \emph{shape} discrepancies only.
+\end{lemma}
+\begin{proof}
+$\sum_{k\ge k_{\min}} \PROB[\Om=k \mid \Om \ge k_{\min}] = 1$ by
+definition; multiplying by $E^{\ge k_{\min}}$ gives the sum to that
+value. The right-hand sum is $E^{\ge k_{\min}}$ by definition.
+$\square$
+\end{proof}
+
+\begin{remark}[The conditional test is conflation-free on the
+$k\ge k_{\min}$ bins]
+\label{rem:no-conflation}
+The unconditional ratio at bin $k$ carries a tautological component
+on any bin the fit was trained on: an $\Om_{\min}=1$ fit will, by
+construction, reproduce the full empirical histogram more closely
+than an $\Om_{\min}\ne 1$ fit, because the $\Om_{\min}=1$ likelihood
+was trained on that histogram. The conditional test removes this
+component on the bins both pipelines agree exist. With predicted
+and empirical mass each re-normalised to the $\Om\ge k_{\min}$
+universe (Lemma above), neither pipeline has an advantage from
+prior exposure to the bins in question; a persistent ratio
+deviation from~1 at $k \ge k_{\min}$ is then a genuine fit-quality
+difference, not a training-set artefact.
+
+On arc269 with $k_{\min}=2$ (singletons excluded), the unfiltered
+mc{=}1 fit's ratios stay in $[0.89,\,1.11]$ across
+$k\in\{2,\dots,\ge 8\}$, while Cs\H{u}r\"os' $\Om_{\min}=4$ fit's
+ratios span $[0.17,\,2.56]$ on the same bins. The unfiltered fit's
+advantage at $k=1$ \emph{is} partly tautological --- it was the
+only fit trained on the singleton stratum --- but the shape
+mismatch the $\Om_{\min}=4$ fit shows at $k\ge 2$ is observed on
+bins both fits contributed equally to under the conditional
+re-normalisation, and is the substantive finding of the test.
+\end{remark}
+
+% =================================================================
+\section{Consistency identities}
+\label{sec:identities}
+% =================================================================
+
+The next four propositions state what should hold by construction
+and which combinations of the two tests are mathematically
+equivalent. Each is verified to machine precision against the live
+arc269 fits (\S\ref{sec:numerical-probe}).
+
+\begin{proposition}[Probability mass conservation]
+$\sum_{k=0}^\infty \PROB[\Om = k] = 1$ for any finite-rate fitted
+GLD process.
+\end{proposition}
+\begin{proof}
+Direct from Proposition~\ref{prop:bins} and
+$\lim_{N\to\infty} L(0, N) = 1$. $\square$
+\end{proof}
+
+\begin{proposition}[$F^*$ identity]
+For any fit with filter $\Om_{\min}$ and visible count $F$,
+\begin{equation}
+F^* (1 - L(0, \Om_{\min})) \;=\; F.
+\label{eq:Fstar-identity}
+\end{equation}
+\end{proposition}
+\begin{proof}
+Definition of $F^*$ in Proposition~\ref{prop:Fstar}. $\square$
+\end{proof}
+
+\begin{proposition}[Reduction at $\Om_{\min}=1$: $\mathrm{cond}@1=\mathrm{unc}$
+on mc=1 fits]\label{prop:reduce-mc1}
+Suppose the fit's filter is $\Om_{\min} = 1$ and the visible count
+equals the empirical $\ge 1$ count: $F = E^{\ge 1}$. Then
+\begin{equation}
+\mathrm{pred}_{\mathrm{cond}}^{(1)}(k)
+\;=\;
+\mathrm{pred}_{\mathrm{unc}}(k),
+\qquad k\ge 1.
+\label{eq:reduce-mc1}
+\end{equation}
+\end{proposition}
+\begin{proof}
+With $\Om_{\min} = 1$,
+$F^* = F/(1 - L(0,1))$ and $F = E^{\ge 1}$ give
+\begin{equation*}
+\mathrm{pred}_{\mathrm{unc}}(k)
+= F^*\PROB[\Om=k]
+= E^{\ge 1}\PROB[\Om=k] / (1 - L(0,1))
+= \mathrm{pred}_{\mathrm{cond}}^{(1)}(k).
+\quad\square
+\end{equation*}
+\end{proof}
+
+\paragraph{Numerical check (mc=1 fit, $k=4$).}
+$\mathrm{pred}_{\mathrm{unc}}(4) = 2{,}128.83$;
+$\mathrm{pred}_{\mathrm{cond}}^{(1)}(4) = 2{,}128.83$;
+difference $0.00\times 10^0$ (machine precision).
+
+\begin{proposition}[Reduction at $k_{\min}=\Om_{\min}$:
+the conditional test collapses to unconditional]\label{prop:reduce-omin}
+For any fit with filter $\Om_{\min}$ and visible count $F = E^{\ge\Om_{\min}}$,
+the conditional test at $k_{\min} = \Om_{\min}$ equals the
+unconditional test on the same bins:
+\begin{equation}
+\mathrm{pred}_{\mathrm{cond}}^{(\Om_{\min})}(k)
+\;=\;
+\mathrm{pred}_{\mathrm{unc}}(k),
+\qquad k\ge \Om_{\min}.
+\label{eq:reduce-omin}
+\end{equation}
+\end{proposition}
+\begin{proof}
+By Definition~\ref{def:cond},
+$\mathrm{pred}_{\mathrm{cond}}^{(\Om_{\min})}(k) = E^{\ge\Om_{\min}}\PROB[\Om=k]/(1-L(0,\Om_{\min}))$.
+Since $F = E^{\ge\Om_{\min}}$ by hypothesis,
+$E^{\ge\Om_{\min}}/(1-L(0,\Om_{\min})) = F/(1-L(0,\Om_{\min})) = F^*$,
+and
+$\mathrm{pred}_{\mathrm{cond}}^{(\Om_{\min})}(k) = F^*\PROB[\Om=k] = \mathrm{pred}_{\mathrm{unc}}(k)$.
+$\square$
+\end{proof}
+
+\paragraph{Numerical check (\texttt{sum}\,$\ge 4$ fit, $k=4$).}
+$\mathrm{pred}_{\mathrm{unc}}(4) = 661.75$;
+$\mathrm{pred}_{\mathrm{cond}}^{(4)}(4) = 661.75$; ratio $1.0000$
+(also $E^{\ge 4} = 11{,}554 = F$, confirming the hypothesis).
+
+\begin{remark}[General relation between the two tests]
+For arbitrary $k_{\min}, \Om_{\min}$ with $k\ge\max(k_{\min}, \Om_{\min})$,
+\begin{equation}
+\frac{\mathrm{pred}_{\mathrm{cond}}^{(k_{\min})}(k)}{\mathrm{pred}_{\mathrm{unc}}(k)}
+\;=\;
+\frac{E^{\ge k_{\min}}}{F}
+\cdot
+\frac{1 - L(0, \Om_{\min})}{1 - L(0, k_{\min})}.
+\label{eq:ratio-cond-uncond}
+\end{equation}
+The two tests coincide iff this ratio is~1, equivalently iff
+$E^{\ge k_{\min}}/F = (1-L(0,k_{\min}))/(1-L(0,\Om_{\min}))$.
+This holds by construction when $k_{\min} = \Om_{\min}$ and the
+data is the $\ge\Om_{\min}$ slice; in every other case the two tests
+measure different combinations of shape and mass.
+\end{remark}
+
+% =================================================================
+\section{Interpretation: shape vs mass}
+\label{sec:interpret}
+% =================================================================
+
+The two tests answer different scientific questions.
+
+\medskip
+\noindent\begin{tabular}{p{0.30\textwidth} p{0.65\textwidth}}
+\toprule
+\textbf{Test} & \textbf{Hypothesis under test} \\
+\midrule
+Unconditional & The rate process generates $F^*$ total families, and
+the data $\{\Prof_f\}_{f=1}^F$ is the $\Om\ge\Om_{\min}$ tail of a
+sample from it. Tests the fitted process after Cs\H{u}r\"os
+amplification: deviations may reflect either wrong bin-shape
+$\PROB[\Om=k]$, wrong implied below-threshold mass relative to the
+empirical full dataset, or both. The identity
+$F^*(1-L(0,\Om_{\min}))=F$ is enforced by construction, not
+independently tested. \\[1.5ex]
+Conditional at $k_{\min}$ & The rate process's distribution
+restricted to $\Om\ge k_{\min}$ matches the shape of the empirical
+$\Om\ge k_{\min}$ universe. Re-normalisation puts predicted and
+empirical mass on a common footing, removing any training-set
+advantage of the $\Om_{\min}=1$ fit at bins below $k_{\min}$
+(Remark~\ref{rem:no-conflation}). Deviations on bins
+$k\ge k_{\min}$ are pure shape mismatches. \\
+\bottomrule
+\end{tabular}
+
+\paragraph{When mass mismatches are biological.}
+If the rate process generates the right shape on the tail but
+predicts wildly more (or wildly fewer) total families than were ever
+sequenced, the unconditional test will fail while the conditional
+test will pass. This pattern is what one would expect if the model
+were correctly describing duplicative gene-family dynamics but the
+true total number of distinct families differed from the inferred
+$F^*$ --- e.g.\ if many small or singleton families had been merged
+or excluded upstream of the analysis, or conversely if many
+spurious families had been included.
+
+\paragraph{When shape mismatches are biological.}
+If both tests fail with the same bin-wise pattern, the rate process
+is producing the wrong shape on $\Om\ge\Om_{\min}$ regardless of how
+mass is calibrated --- the model is structurally misspecified for
+the visible tail. This is harder to fix by re-weighting; it requires
+either a different rate parameterisation (mixture, branch
+heterogeneity, HGT) or a different filter.
+
+\paragraph{Why $k_{\min} > 1$ is biologically meaningful.}
+If a non-trivial fraction of empirical singletons ($\Om = 1$) is not
+drawn from the birth--death process at all --- annotation noise, very
+recent \emph{de novo} events on tip branches, recent HGT not yet
+replicated by paralogs --- the unconditional test at $k=1$ is
+contaminated by mis-attribution: the model could be a perfectly good
+description of \emph{biological gene-family dynamics} and still fail
+at $k=1$. The conditional test at $k_{\min} = 2$ (singletons
+excluded) makes this concern explicit and removes it from the test.
+
+% =================================================================
+\section{Numerical results on arc269}
+\label{sec:arc269}
+% =================================================================
+
+The mc=1 no-filter fit passes both tests at all conditioning levels:
+\[
+\rho_{\mathrm{unc}} \in [0.94,\, 1.29], \qquad
+\rho_{\mathrm{cond}}^{(2)} \in [0.89,\, 1.11], \qquad
+\rho_{\mathrm{cond}}^{(3)} \in [0.95,\, 1.03].
+\]
+The filtered fits ($\Om_{\min} \ge 2$) \emph{fail} both tests, with
+conditional ratios spanning roughly $0.03$--$3.3$ at
+$\Om_{\min} = 10$ and $k_{\min} = 2$. The empirical shape mismatch
+\emph{persists even after singletons are removed}: the rate process
+under filter $\Om\ge N$ is fundamentally heavier-tailed than the
+empirical $\Om \ge k$ distribution it claims to describe, for every
+$N \ge 2$.
+
+\paragraph{Biological reading.}
+The unfiltered mc=1 fit is the best descriptor of the family-size
+distribution of arc269. The filter-tightened fits sacrifice family-size
+shape calibration to reduce ancestral-genome inflation; this is the
+substantive critique of Cs26's $\Om_{\min}=4$ filtering choice
+discussed in the project README.
+
+\subsection{Numerical identity probe}
+\label{sec:numerical-probe}
+
+\begin{verbatim}
+Identity 1: sum_k P(Omega=k) = 1.0000000000     (should be 1.0)
+Identity 2 (mc=1):  F* (1 - L(0,1)) = 90243.0000  (should be F_visible)
+Identity 3 (mc=1, k=4):  uncond=2128.83, cond@1=2128.83  diff=0.00e+00
+Identity 4 (sum>=4, k=4):  uncond=661.75, cond@4=661.75  ratio=1.0000
+  (E_{>=4} / F_visible = 1.0000 confirms hypothesis of Prop. 7)
+\end{verbatim}
+
+All four identities hold to machine precision on the live arc269
+fits.
+
+% =================================================================
+\section{Implementation reference}
+% =================================================================
+
+\begin{itemize}[leftmargin=*]
+\item $L(0, N)$ via $P_n$-tensor recursion (Cs\H{u}r\"os 2026 SI
+  Thms 3--5). Entry point
+  \texttt{recount.native\_backend.unobserved\_logL0\_native}
+  with signature \texttt{(tree, gain, loss, dup, length, min\_copies=N)}.
+  Validated bit-for-bit against Java reference at $N\in\{1,2,4\}$.
+\item Bin probabilities $\PROB[\Om = k] = L(0, k+1) - L(0, k)$ are
+  computed inline from successive \texttt{min\_copies=k} and
+  \texttt{min\_copies=k+1} calls to the same routine.
+\item Three tables (unconditional, $\mathrm{cond}@2$, $\mathrm{cond}@3$)
+  applied to the arc269 fit suite live in
+  \texttt{validation/l0\_goodness\_of\_fit.py}; the four numerical
+  identities of \S\ref{sec:numerical-probe} are re-derived inside
+  the same script for live regression testing against the saved
+  arc269 fits.
+\end{itemize}
+
+\end{document}

@@ -1,0 +1,33 @@
+{
+  "label": "arc269",
+  "F": 90243,
+  "N": 537,
+  "leaves": 269,
+  "min_copies": 1,
+  "prior": {
+    "sigma": 0.9,
+    "mu_gain": -2.3025850929940455,
+    "mu_dup": -0.6931471805599453,
+    "mu_length": 0.0
+  },
+  "final": {
+    "ll": -1115774.6115730016,
+    "L0": 0.5932236614597758,
+    "F": 90243,
+    "min_copies": 1,
+    "root_copies_obs": 6806.565614127514,
+    "root_copies_corr": 6806.565614127514,
+    "root_families_obs": 3327.3218954826107,
+    "root_families_corr": 3327.3218954826107,
+    "copies_per_family": 2.045658889621876
+  },
+  "log_prior_at_best": -3794.3493824184284,
+  "neg_logp_at_best": 1119568.96095542,
+  "csuros_baseline": null,
+  "fit_settings": {
+    "num_starts": 1,
+    "cycle_iters": 100,
+    "max_cycles": 12,
+    "seed": 2032
+  }
+}
